@@ -5,3 +5,4 @@
 export { tavilySearchTool } from './tavilySearch';
 export { thinkTool } from './thinkTool';
 export { getMcpClient, mcpConfig } from './mcpClient';
+export { conductResearchTool, researchCompleteTool } from './supervisorTools';

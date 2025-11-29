@@ -9,3 +9,5 @@ export { compressResearch } from './researchAgent/compressResearch';
 export { researchToolNode } from './researchAgent/toolNode';
 export { researchMcpLlmCall } from './researchAgentMcp/llmCall';
 export { researchMcpToolNode } from './researchAgentMcp/toolNode';
+export { supervisor } from './supervisor/supervisor';
+export { supervisorTools } from './supervisor/supervisorTools';

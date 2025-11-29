@@ -34,6 +34,10 @@ export const StateAnnotation = Annotation.Root({
         },
         default: () => [],
     }),
+    research_iterations: Annotation<number>({
+        reducer: (_left: number, right: number) => right,
+        default: () => 0,
+    }),
     final_report: Annotation<string | null>({
         default: () => null,
         reducer: (_left: string | null, right: string | null) => {

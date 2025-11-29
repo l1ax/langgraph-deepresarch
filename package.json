@@ -9,7 +9,8 @@
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "evaluate:scope": "tsx evaluation/scope/run.ts"
+    "evaluate:scope": "tsx evaluation/scope/run.ts",
+    "evaluate:supervisor": "tsx evaluation/supervisor/run.ts"
   },
   "keywords": [],
   "author": "",

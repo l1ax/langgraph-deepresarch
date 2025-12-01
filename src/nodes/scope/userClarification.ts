@@ -18,12 +18,10 @@ export interface ClarifyWithUser {
 export async function clarifyWithUser(
   state: typeof StateAnnotation.State
 ): Promise<Command> {
-  // Format the prompt with current messages and date
   const promptContent = clarifyWithUserInstructions
     .replace('{messages}', getBufferString(state.messages || []))
     .replace('{date}', getTodayStr());
 
-  // Invoke the model with clarification instructions
   const response = await deepSeek.invoke({
     messages: [
       {

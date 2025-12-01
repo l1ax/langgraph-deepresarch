@@ -57,35 +57,52 @@ Today's date is {date}.
 
 You will return a single research question that will be used to guide the research.
 
+<Core Principle>
+The research brief must be a FAITHFUL REPRESENTATION of the user's request. It should contain ONLY information that the user explicitly stated or directly implied. Do not add, infer, or assume any information beyond what the user provided.
+</Core Principle>
+
 Guidelines:
-1. Maximize Specificity and Detail
-- Include all known user preferences and explicitly list key attributes or dimensions to consider.
-- It is important that all details from the user are included in the instructions.
 
-2. Handle Unstated Dimensions Carefully
-- When research quality requires considering additional dimensions that the user hasn't specified, acknowledge them as open considerations rather than assumed preferences.
-- Example: Instead of assuming "budget-friendly options," say "consider all price ranges unless cost constraints are specified."
-- Only mention dimensions that are genuinely necessary for comprehensive research in that domain.
+1. Include ALL User-Stated Information
+- Capture every preference, constraint, requirement, and detail the user explicitly mentioned.
+- Preserve the user's exact priorities (e.g., "must have" vs. "nice to have" vs. "optional").
+- Do not omit any user-provided information.
 
-3. Avoid Unwarranted Assumptions
-- Never invent specific user preferences, constraints, or requirements that weren't stated.
-- If the user hasn't provided a particular detail, explicitly note this lack of specification.
-- Guide the researcher to treat unspecified aspects as flexible rather than making assumptions.
+2. STRICT Prohibition on Adding New Information
+- Do NOT introduce any dimensions, criteria, categories, factors, or considerations that the user did not mention.
+- Do NOT expand the scope by listing additional aspects to investigate beyond what the user requested.
+- Do NOT use phrases like "such as...", "including...", "for example...", or "additionally, investigate..." followed by items the user never mentioned.
+- If the user asks for a "comprehensive" search, this means thorough coverage of THEIR stated criteria, NOT an invitation to add new criteria.
 
-4. Distinguish Between Research Scope and User Preferences
-- Research scope: What topics/dimensions should be investigated (can be broader than user's explicit mentions)
-- User preferences: Specific constraints, requirements, or preferences (must only include what user stated)
-- Example: "Research coffee quality factors (including bean sourcing, roasting methods, brewing techniques) for San Francisco coffee shops, with primary focus on taste as specified by the user."
+3. Handle Unspecified Aspects Correctly
+- For aspects the user did not mention: simply do not include them in the brief.
+- Do NOT add generic statements suggesting the researcher should investigate additional unstated dimensions.
+- The absence of information from the user should result in absence from the brief, not filler content.
+
+4. Allowed Content Only
+The brief may ONLY contain:
+- Requirements, preferences, and constraints explicitly stated by the user
+- Clarifications or rephrasing of user-stated information (without changing meaning)
+- Reasonable source recommendations for the type of research requested
+- The date context if relevant to the research
 
 5. Use the First Person
 - Phrase the request from the perspective of the user.
 
 6. Sources
 - If specific sources should be prioritized, specify them in the research question.
-- For product and travel research, prefer linking directly to official or primary websites (e.g., official brand sites, manufacturer pages, or reputable e-commerce platforms like Amazon for user reviews) rather than aggregator sites or SEO-heavy blogs.
-- For academic or scientific queries, prefer linking directly to the original paper or official journal publication rather than survey papers or secondary summaries.
-- For people, try linking directly to their LinkedIn profile, or their personal website if they have one.
+- For product and travel research, prefer official or primary websites rather than aggregator sites.
+- For academic or scientific queries, prefer original papers or official publications.
+- For people, try linking to their LinkedIn profile or personal website.
 - If the query is in a specific language, prioritize sources published in that language.
+
+<Self-Check Before Output>
+Before returning the brief, verify:
+1. Every piece of information in the brief can be traced back to something the user said.
+2. No new dimensions, criteria, or investigation areas have been added.
+3. No assumptions about user preferences have been made.
+If any content fails this check, remove it.
+</Self-Check Before Output>
 
 Return the JSON object in the following format:
 {

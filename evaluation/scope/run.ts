@@ -10,7 +10,7 @@
 
 import { Client } from "langsmith";
 import { evaluate } from "langsmith/evaluation";
-import { graph } from "../../src/graph";
+import { scopeAgentGraph } from "../../src/graph";
 import { evaluationDataset } from "./dataset";
 import {
   evaluateSuccessCriteria,
@@ -36,7 +36,7 @@ async function targetFunc(
     ...config,
   };
 
-  const result = await graph.invoke(inputs, graphConfig);
+  const result = await scopeAgentGraph.invoke(inputs, graphConfig);
   
   return {
     research_brief: (result.research_brief as string) || "",

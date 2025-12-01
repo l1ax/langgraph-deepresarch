@@ -6,7 +6,7 @@ dotenv.config();
 
 const graphBuilder = new StateGraph(StateAnnotation);
 
-export const graph = graphBuilder
+export const scopeAgentGraph = graphBuilder
     .addNode("clarify_with_user", clarifyWithUser, {
         ends: [END, "write_research_brief"],
     })
@@ -17,4 +17,4 @@ export const graph = graphBuilder
     .addEdge("write_research_brief", END)
     .compile();
 
-graph.name = 'scopeResearch'
+scopeAgentGraph.name = 'scopeAgent'

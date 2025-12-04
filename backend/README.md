@@ -156,3 +156,21 @@ This provides a comprehensive assessment of SF coffee shops based specifically o
 ];
 ```
 通过判断最后llmCall中是否存在 toolCall 来判断llm决定继续工具循环 or 终止。
+
+## supervisor
+### supervisor的必要性
+在处理复杂请求且包含多个子主题时，单agent的响应和质量会受到影响。这是因为agent需要在单个上下文窗口中存储所有子主题的工具反馈和响应，这会导致上下文长度迅速膨胀、上下文冲突，产生模型注意力偏移的问题，从而影响回答效果。
+
+因此，在进行多子主题研究时，可以将问题拆解给多个子agent进行处理，每个agent拥有独立的上下文窗口；每个子agent有supervisor来委托派发任务。
+
+### supervisor的作用
+supervisor 通过 工具循环 进行任务分发与终止研究，其拥有的节点大致有三个【thinkTool, conductResearch, researchComplete】，supervisor的任务大致如下：
+- 根据research判断是否为可并行任务
+- 生成子主题，派发给research Agent进行研究
+- 根据上下文对现状进行总结、反思
+- 判断收集的信息是否足够回答问题，如果不够，继续派发给research Agent
+
+### 评测
+supervisor的评测主要评估其 判断是否可以使用并行化研究 的准确度。
+通常在需要研究多个子主题，且子主题之间没有明显依赖关系时可以使用并行化研究，比如compare类型主题。
+

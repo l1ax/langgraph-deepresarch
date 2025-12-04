@@ -17,4 +17,4 @@ export const scopeAgentGraph = graphBuilder
     .addEdge("write_research_brief", END)
     .compile();
 
-scopeAgentGraph.name = 'scopeAgent'
+(scopeAgentGraph as any).name = 'scopeAgent'

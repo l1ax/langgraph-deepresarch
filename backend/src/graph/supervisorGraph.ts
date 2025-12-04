@@ -57,7 +57,7 @@ function routeAfterTools(state: typeof StateAnnotation.State) {
 // ===== 构建图 =====
 
 // 创建工作流图
-const graphBuilder = new StateGraph(StateAnnotation)
+export const supervisorGraphBuilder = new StateGraph(StateAnnotation)
     .addNode('supervisor', supervisor)
     .addNode('supervisor_tools', supervisorTools)
     .addEdge(START, 'supervisor')
@@ -65,6 +65,6 @@ const graphBuilder = new StateGraph(StateAnnotation)
     .addConditionalEdges('supervisor_tools', routeAfterTools);
 
 // 编译工作流图
-export const supervisorGraph = graphBuilder.compile();
+export const supervisorGraph = supervisorGraphBuilder.compile();
 
-supervisorGraph.name = 'supervisorAgent';
+(supervisorGraph as any).name = 'supervisorAgent';

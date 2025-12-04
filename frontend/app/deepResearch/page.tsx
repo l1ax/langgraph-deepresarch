@@ -10,7 +10,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { DeepResearchPageStore } from '@/stores';
+import { DeepResearchPageStore, Executor } from '@/stores';
+import { EventRendererRegistry, EventView } from '@/services';
+import { ClarifyEventRenderer } from '@/components/ClarifyEventRenderer';
+
+// 注册渲染器
+EventRendererRegistry.register<Executor.ClarifyEventData>('clarify', ClarifyEventRenderer);
 
 const DeepResearchPage = observer(() => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -22,10 +27,10 @@ const DeepResearchPage = observer(() => {
     store.initClient();
   }, [store]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when messages or events change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [store.messages]);
+  }, [store.messages, store.eventViews]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,23 +82,15 @@ const DeepResearchPage = observer(() => {
                       : 'bg-background border text-foreground rounded-tl-sm'
                   )}
                 >
-                  {message.content ? (
-                    message.role === 'assistant' ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2 prose-pre:bg-muted prose-pre:rounded-lg prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
-                    ) : (
-                      <div className="whitespace-pre-wrap break-words">
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2 prose-pre:bg-muted prose-pre:rounded-lg prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {message.content}
-                      </div>
-                    )
+                      </ReactMarkdown>
+                    </div>
                   ) : (
-                    <div className="flex items-center gap-1 h-5">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current delay-0"></span>
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current delay-150"></span>
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current delay-300"></span>
+                    <div className="whitespace-pre-wrap break-words">
+                      {message.content}
                     </div>
                   )}
                 </div>
@@ -107,6 +104,42 @@ const DeepResearchPage = observer(() => {
                 )}
               </div>
             ))}
+
+            {/* Loading 指示器 - 仅在加载中且没有 events 时显示 */}
+            {store.isLoading && store.eventViews.length === 0 && (
+              <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
+                <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
+                  <AvatarFallback className="bg-primary/5 text-primary">
+                    <Bot className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm bg-background border text-foreground rounded-tl-sm">
+                  <div className="flex items-center gap-1 h-5">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]"></span>
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]"></span>
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]"></span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Event Views 渲染区域 - 遍历 events 使用注册的渲染器 */}
+            {store.eventViews.map((view) => (
+              <div
+                key={view.id}
+                className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12"
+              >
+                <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
+                  <AvatarFallback className="bg-primary/5 text-primary">
+                    <Bot className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <EventView event={view.event} />
+                </div>
+              </div>
+            ))}
+
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>

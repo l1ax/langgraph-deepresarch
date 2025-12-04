@@ -3,11 +3,12 @@
  */
 
 import { AIMessage, getBufferString } from "@langchain/core/messages";
-import { Command } from "@langchain/langgraph";
+import { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
 import deepSeek from '../../llm';
 import { clarifyWithUserInstructions } from '../../prompts';
 import { getTodayStr } from '../../utils';
 import { StateAnnotation } from '../../state';
+import {ClarifyEvent} from '../../outputAdapters';
 
 export interface ClarifyWithUser {
   need_clarification: boolean;
@@ -16,8 +17,11 @@ export interface ClarifyWithUser {
 }
 
 export async function clarifyWithUser(
-  state: typeof StateAnnotation.State
+  state: typeof StateAnnotation.State,
+  config: LangGraphRunnableConfig
 ): Promise<Command> {
+  const event = new ClarifyEvent();
+
   const promptContent = clarifyWithUserInstructions
     .replace('{messages}', getBufferString(state.messages || []))
     .replace('{date}', getTodayStr());
@@ -34,6 +38,11 @@ export async function clarifyWithUser(
 
   // Parse the structured output
   const clarification: ClarifyWithUser = JSON.parse(response as string);
+
+  event.content.data = clarification;
+  if (config.writer) {
+    config.writer(event.toJSON());
+  }
 
   // Route based on clarification need
   if (clarification.need_clarification) {

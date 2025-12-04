@@ -1,9 +1,5 @@
 import { observable, action, flow, computed, makeObservable } from 'mobx';
-import { Client } from '@langchain/langgraph-sdk';
-
-// Configuration
-const GRAPH_ID = 'scopeAgent';
-const API_URL = 'http://localhost:2024';
+import { Executor } from './Executor';
 
 export class DeepResearchPageStore {
   /** 聊天消息列表 */
@@ -12,14 +8,8 @@ export class DeepResearchPageStore {
   /** 输入框当前值 */
   @observable inputValue: string = '';
 
-  /** 是否正在加载/处理请求 */
-  @observable isLoading: boolean = false;
-
-  /** 当前会话线程 ID */
-  @observable threadId: string | null = null;
-
-  /** LangGraph SDK 客户端实例 */
-  @observable client: Client | null = null;
+  /** Executor 实例 */
+  @observable executor: Executor = new Executor();
 
   constructor() {
     makeObservable(this);
@@ -46,12 +36,6 @@ export class DeepResearchPageStore {
     }
   }
 
-  /** 设置加载状态 */
-  @action.bound
-  private setLoading(value: boolean) {
-    this.isLoading = value;
-  }
-
   /** 清空输入框 */
   @action.bound
   private clearInput() {
@@ -62,10 +46,7 @@ export class DeepResearchPageStore {
   @flow.bound
   *initClient() {
     try {
-      this.client = new Client({ apiUrl: API_URL });
-      const thread: { thread_id: string } = yield this.client.threads.create();
-
-      this.threadId = thread.thread_id;
+      yield this.executor.init();
       this.messages = [
         {
           id: 'welcome',
@@ -79,9 +60,20 @@ export class DeepResearchPageStore {
     }
   }
 
+  /** 添加错误消息 */
+  @action.bound
+  private addErrorMessage(content: string) {
+    this.messages.push({
+      id: `error-${Date.now()}`,
+      role: 'assistant',
+      content,
+      timestamp: new Date(),
+    });
+  }
+
   /** 提交用户消息并处理流式响应 */
   async handleSubmit() {
-    if (!this.inputValue.trim() || !this.client || !this.threadId) return;
+    if (!this.inputValue.trim() || !this.executor.client || !this.executor.threadId) return;
 
     const userMessageContent = this.inputValue;
     const userMessage: DeepResearchPageStore.ChatMessage = {
@@ -91,64 +83,35 @@ export class DeepResearchPageStore {
       timestamp: new Date(),
     };
 
-    // 创建助手消息占位符
-    const assistantMessageId = (Date.now() + 1).toString();
-    const assistantMessage: DeepResearchPageStore.ChatMessage = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-    };
-
     this.addMessage(userMessage);
-    this.addMessage(assistantMessage);
     this.clearInput();
-    this.setLoading(true);
 
     try {
-      // 开始流式请求
-      const stream = this.client.runs.stream(this.threadId, GRAPH_ID, {
-        input: {
-          messages: [{ role: 'user', content: userMessageContent }],
-        },
-        streamMode: 'values',
-      });
-
-      for await (const chunk of stream) {
-        console.log(chunk);
-
-        // 类型安全检查 values 事件
-        if (!DeepResearchPageStore.isValuesChunk(chunk)) continue;
-
-        const { messages: stateMessages } = chunk.data;
-
-        if (stateMessages.length > 0) {
-          const lastMessage = stateMessages[stateMessages.length - 1];
-
-          // 仅当最后一条消息来自 AI 时更新
-          if (lastMessage.type === 'ai') {
-            const content = DeepResearchPageStore.extractMessageContent(
-              lastMessage.content
-            );
-            this.updateMessageContent(assistantMessageId, content);
-          }
-        }
-      }
+      await this.executor.invoke(userMessageContent);
     } catch (error) {
       console.error('Error sending message:', error);
-      this.updateMessageContent(
-        assistantMessageId,
+      this.addErrorMessage(
         '抱歉，处理您的请求时出现错误。请确保后端服务已启动 (http://localhost:2024)。'
       );
-    } finally {
-      this.setLoading(false);
     }
+  }
+
+  /** 是否正在加载/处理请求 */
+  @computed
+  get isLoading(): boolean {
+    return this.executor.isExecuting;
   }
 
   /** 是否可以提交（非加载中且输入不为空） */
   @computed
   get canSubmit(): boolean {
     return !this.isLoading && !!this.inputValue.trim();
+  }
+
+  /** 获取事件视图列表（用于 UI 渲染） */
+  @computed
+  get eventViews(): Executor.EventView[] {
+    return this.executor.views;
   }
 }
 

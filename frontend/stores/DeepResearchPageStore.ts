@@ -1,15 +1,23 @@
 import { observable, action, flow, computed, makeObservable } from 'mobx';
 import { Executor } from './Executor';
+import { Conversation } from './Conversation';
 
+/**
+ * DeepResearchPageStore
+ * 页面级 Store，管理 executor 和 conversations
+ */
 export class DeepResearchPageStore {
-  /** 聊天消息列表 */
-  @observable messages: DeepResearchPageStore.ChatMessage[] = [];
-
   /** 输入框当前值 */
   @observable inputValue: string = '';
 
   /** Executor 实例 */
   @observable executor: Executor = new Executor();
+
+  /** 会话列表 */
+  @observable conversations: Conversation[] = [];
+
+  /** 当前活跃的会话 */
+  @observable currentConversation: Conversation | null = null;
 
   constructor() {
     makeObservable(this);
@@ -21,25 +29,19 @@ export class DeepResearchPageStore {
     this.inputValue = value;
   }
 
-  /** 添加一条消息到消息列表 */
-  @action.bound
-  private addMessage(message: DeepResearchPageStore.ChatMessage) {
-    this.messages.push(message);
-  }
-
-  /** 更新指定消息的内容 */
-  @action.bound
-  private updateMessageContent(messageId: string, content: string) {
-    const message = this.messages.find((msg) => msg.id === messageId);
-    if (message) {
-      message.content = content;
-    }
-  }
-
   /** 清空输入框 */
   @action.bound
   private clearInput() {
     this.inputValue = '';
+  }
+
+  /** 创建新会话 */
+  @action.bound
+  private createConversation(threadId: string): Conversation {
+    const conversation = new Conversation(threadId);
+    this.conversations.push(conversation);
+    this.currentConversation = conversation;
+    return conversation;
   }
 
   /** 初始化客户端和会话线程 */
@@ -47,47 +49,62 @@ export class DeepResearchPageStore {
   *initClient() {
     try {
       yield this.executor.init();
-      this.messages = [
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: '你好！我是 DeepResearch 助手。请告诉我你想研究什么主题？',
-          timestamp: new Date(),
-        },
-      ];
+
+      // 创建新会话
+      if (this.executor.threadId) {
+        const conversation = this.createConversation(this.executor.threadId);
+        // 添加欢迎消息
+        const welcomeEvent = Executor.createChatEvent(
+          'welcome',
+          '你好！我是 DeepResearch 助手。请告诉我你想研究什么主题？'
+        );
+        conversation.addAssistantEvent(welcomeEvent);
+      }
     } catch (error) {
       console.error('Failed to initialize client:', error);
     }
   }
 
-  /** 添加错误消息 */
+  /** 添加错误消息到当前会话 */
   @action.bound
   private addErrorMessage(content: string) {
-    this.messages.push({
-      id: `error-${Date.now()}`,
-      role: 'assistant',
-      content,
-      timestamp: new Date(),
-    });
+    if (this.currentConversation) {
+      const errorEvent = Executor.createChatEvent(
+        `error-${Date.now()}`,
+        content
+      );
+      this.currentConversation.addAssistantEvent(errorEvent);
+    }
+  }
+
+  /**
+   * 事件创建后的回调方法
+   * 将 executor 创建的事件包装成 element 添加到 conversation
+   */
+  @action.bound
+  private handleEventCreated(event: Executor.OutputEvent) {
+    if (this.currentConversation) {
+      this.currentConversation.addAssistantEvent(event);
+    }
   }
 
   /** 提交用户消息并处理流式响应 */
   async handleSubmit() {
     if (!this.inputValue.trim() || !this.executor.client || !this.executor.threadId) return;
+    if (!this.currentConversation) return;
 
     const userMessageContent = this.inputValue;
-    const userMessage: DeepResearchPageStore.ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userMessageContent,
-      timestamp: new Date(),
-    };
 
-    this.addMessage(userMessage);
+    // 添加用户消息到当前会话
+    this.currentConversation.addUserMessage(userMessageContent);
     this.clearInput();
 
     try {
-      await this.executor.invoke(userMessageContent);
+      // 调用 executor，传入事件创建回调
+      await this.executor.invoke(
+        userMessageContent,
+        this.handleEventCreated
+      );
     } catch (error) {
       console.error('Error sending message:', error);
       this.addErrorMessage(
@@ -108,26 +125,14 @@ export class DeepResearchPageStore {
     return !this.isLoading && !!this.inputValue.trim();
   }
 
-  /** 获取事件视图列表（用于 UI 渲染） */
+  /** 获取当前会话的所有元素（用于 UI 渲染） */
   @computed
-  get eventViews(): Executor.EventView[] {
-    return this.executor.views;
+  get elements(): Conversation.Element[] {
+    return this.currentConversation?.allElements ?? [];
   }
 }
 
 export namespace DeepResearchPageStore {
-  /** UI 层聊天消息类型 */
-  export type ChatMessage = {
-    /** 消息唯一标识 */
-    id: string;
-    /** 消息角色：用户或助手 */
-    role: 'user' | 'assistant';
-    /** 消息内容 */
-    content: string;
-    /** 消息时间戳 */
-    timestamp: Date;
-  };
-
   /** LangChain 消息内容类型（字符串或内容块数组） */
   export type MessageContent = string | Array<{ type: string; text?: string }>;
 

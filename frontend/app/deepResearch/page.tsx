@@ -8,14 +8,70 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { DeepResearchPageStore, Executor } from '@/stores';
+import { DeepResearchPageStore, Executor, Conversation } from '@/stores';
 import { EventRendererRegistry, EventView } from '@/services';
 import { ClarifyEventRenderer } from '@/components/ClarifyEventRenderer';
+import { BriefEventRenderer } from '@/components/BriefEventRenderer';
+import { ChatEventRenderer } from '@/components/ChatEventRenderer';
 
 // 注册渲染器
 EventRendererRegistry.register<Executor.ClarifyEventData>('clarify', ClarifyEventRenderer);
+EventRendererRegistry.register<Executor.BriefEventData>('brief', BriefEventRenderer);
+EventRendererRegistry.register<Executor.ChatEventData>('chat', ChatEventRenderer);
+
+/** 用户消息元素渲染组件 */
+const UserElementRenderer = observer<{ element: Conversation.UserElement }>(({ element }) => (
+  <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-end pl-12">
+    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm max-w-full overflow-hidden bg-primary text-primary-foreground rounded-tr-sm">
+      <div className="whitespace-pre-wrap break-words">{element.content}</div>
+    </div>
+    <Avatar className="h-8 w-8 border shrink-0">
+      <AvatarFallback className="bg-muted">
+        <User className="h-4 w-4" />
+      </AvatarFallback>
+    </Avatar>
+  </div>
+));
+
+/** 助手消息元素渲染组件 */
+const AssistantElementRenderer = observer<{ element: Conversation.AssistantElement }>(({ element }) => (
+  <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
+    <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
+      <AvatarFallback className="bg-primary/5 text-primary">
+        <Bot className="h-4 w-4" />
+      </AvatarFallback>
+    </Avatar>
+    <div className="flex-1">
+      <EventView event={element.event} />
+    </div>
+  </div>
+));
+
+/** 元素渲染组件 - 根据类型分发到对应渲染器 */
+const ElementRenderer = observer<{ element: Conversation.Element }>(({ element }) => {
+  if (Conversation.isUserElement(element)) {
+    return <UserElementRenderer element={element} />;
+  }
+  return <AssistantElementRenderer element={element} />;
+});
+
+/** Loading 指示器组件 */
+const LoadingIndicator = observer(() => (
+  <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
+    <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
+      <AvatarFallback className="bg-primary/5 text-primary">
+        <Bot className="h-4 w-4" />
+      </AvatarFallback>
+    </Avatar>
+    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm bg-background border text-foreground rounded-tl-sm">
+      <div className="flex items-center gap-1 h-5">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]"></span>
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]"></span>
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]"></span>
+      </div>
+    </div>
+  </div>
+));
 
 const DeepResearchPage = observer(() => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -27,15 +83,20 @@ const DeepResearchPage = observer(() => {
     store.initClient();
   }, [store]);
 
-  // Auto-scroll to bottom when messages or events change
+  // Auto-scroll to bottom when elements change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [store.messages, store.eventViews]);
+  }, [store.elements]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await store.handleSubmit();
   };
+
+  // 判断是否显示 loading：正在加载且最后一个元素是用户消息
+  // 不使用 useMemo，直接计算以确保 mobx 响应式正常工作
+  const lastElement = store.elements[store.elements.length - 1];
+  const showLoading = store.isLoading && lastElement && Conversation.isUserElement(lastElement);
 
   return (
     <div className="flex h-screen w-full flex-col bg-background text-foreground font-sans selection:bg-primary/20">
@@ -56,89 +117,13 @@ const DeepResearchPage = observer(() => {
       <div className="flex-1 overflow-hidden relative bg-muted/5">
         <ScrollArea className="h-full p-4 md:p-8" ref={scrollAreaRef}>
           <div className="mx-auto max-w-3xl space-y-8 pb-24">
-            {store.messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  'flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300',
-                  message.role === 'user'
-                    ? 'justify-end pl-12'
-                    : 'justify-start pr-12'
-                )}
-              >
-                {message.role === 'assistant' && (
-                  <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
-                    <AvatarFallback className="bg-primary/5 text-primary">
-                      <Bot className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-
-                <div
-                  className={cn(
-                    'relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm max-w-full overflow-hidden',
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                      : 'bg-background border text-foreground rounded-tl-sm'
-                  )}
-                >
-                  {message.role === 'assistant' ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2 prose-pre:bg-muted prose-pre:rounded-lg prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  ) : (
-                    <div className="whitespace-pre-wrap break-words">
-                      {message.content}
-                    </div>
-                  )}
-                </div>
-
-                {message.role === 'user' && (
-                  <Avatar className="h-8 w-8 border shrink-0">
-                    <AvatarFallback className="bg-muted">
-                      <User className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
+            {/* 渲染所有元素 */}
+            {store.elements.map((element) => (
+              <ElementRenderer key={element.id} element={element} />
             ))}
 
-            {/* Loading 指示器 - 仅在加载中且没有 events 时显示 */}
-            {store.isLoading && store.eventViews.length === 0 && (
-              <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
-                <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
-                  <AvatarFallback className="bg-primary/5 text-primary">
-                    <Bot className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm bg-background border text-foreground rounded-tl-sm">
-                  <div className="flex items-center gap-1 h-5">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]"></span>
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]"></span>
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]"></span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Event Views 渲染区域 - 遍历 events 使用注册的渲染器 */}
-            {store.eventViews.map((view) => (
-              <div
-                key={view.id}
-                className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12"
-              >
-                <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
-                  <AvatarFallback className="bg-primary/5 text-primary">
-                    <Bot className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <EventView event={view.event} />
-                </div>
-              </div>
-            ))}
+            {/* Loading 指示器 */}
+            {showLoading && <LoadingIndicator />}
 
             <div ref={messagesEndRef} />
           </div>

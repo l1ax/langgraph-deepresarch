@@ -1,17 +1,15 @@
 import {BaseEvent} from './BaseEvent';
 
-export class ClarifyEvent extends BaseEvent<ClarifyEvent.IContent> {
-    content: ClarifyEvent.IContent = {
+export class BriefEvent extends BaseEvent<BriefEvent.IContent> {
+    content: BriefEvent.IContent = {
         contentType: 'text',
         data: {
-            need_clarification: false,
-            question: '',
-            verification: '',
+            research_brief: '',
         },
     };
 
     constructor() {
-        super('clarify');
+        super('brief');
     }
 
     toJSON(): Record<string, unknown> {
@@ -23,13 +21,13 @@ export class ClarifyEvent extends BaseEvent<ClarifyEvent.IContent> {
     }
 }
 
-export namespace ClarifyEvent {
+export namespace BriefEvent {
     export interface IContent {
         contentType: 'text';
         data: {
-            need_clarification: boolean;
-            question: string;
-            verification: string;
+            /** 研究概要内容 */
+            research_brief: string;
         };
     }
 }
+

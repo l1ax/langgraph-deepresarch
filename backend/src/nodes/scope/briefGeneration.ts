@@ -7,13 +7,16 @@ import deepSeek from '../../llm';
 import { transformMessagesIntoResearchTopicPrompt } from '../../prompts';
 import { getTodayStr } from '../../utils';
 import { StateAnnotation } from '../../state';
+import {LangGraphRunnableConfig} from '@langchain/langgraph';
+import { BriefEvent } from '../../outputAdapters';
 
 export interface ResearchQuestion {
   research_brief: string;
 }
 
 export async function writeResearchBrief(
-  state: typeof StateAnnotation.State
+  state: typeof StateAnnotation.State,
+  config: LangGraphRunnableConfig
 ) {
   const promptContent = transformMessagesIntoResearchTopicPrompt
     .replace('{messages}', getBufferString(state.messages || []))
@@ -32,6 +35,12 @@ export async function writeResearchBrief(
   });
 
   const researchQuestion: ResearchQuestion = JSON.parse(response as string);
+
+  if (config.writer) {
+    const briefEvent = new BriefEvent();
+    briefEvent.content.data.research_brief = researchQuestion.research_brief;
+    config.writer(briefEvent.toJSON());
+  }
 
   return {
     research_brief: researchQuestion.research_brief,

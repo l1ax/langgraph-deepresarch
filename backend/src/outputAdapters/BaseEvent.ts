@@ -1,6 +1,11 @@
-export abstract class BaseEvent<T extends BaseEvent.IContent> implements BaseEvent.IEvent<T> {
-    constructor(public eventType: BaseEvent.EventType) {
+import { v4 as uuidv4 } from 'uuid';
 
+export abstract class BaseEvent<T extends BaseEvent.IContent> implements BaseEvent.IEvent<T> {
+    /** 事件唯一标识 */
+    id: string;
+
+    constructor(public eventType: BaseEvent.EventType) {
+        this.id = uuidv4();
     }
 
     abstract content: T;
@@ -10,6 +15,8 @@ export abstract class BaseEvent<T extends BaseEvent.IContent> implements BaseEve
 
 export namespace BaseEvent {
     export interface IEvent<T extends IContent> {
+        /** 事件唯一标识 */
+        id: string;
         /** 事件类型 */
         eventType: EventType;
         /** 事件内容 */
@@ -18,7 +25,7 @@ export namespace BaseEvent {
 
 
     /** 事件类型 */
-    export type EventType = 'clarify';
+    export type EventType = 'clarify' | 'brief';
 
     /** 事件内容 */
     export interface IContent {

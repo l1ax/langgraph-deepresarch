@@ -5,6 +5,8 @@ import { Executor } from '@/stores';
 export interface EventRendererProps<T = unknown> {
   /** 事件数据 */
   data: T;
+  /** 事件状态 */
+  status: Executor.EventStatus;
   /** 自定义类名 */
   className?: string;
 }
@@ -80,6 +82,6 @@ export const EventView: React.FC<{
     return null;
   }
 
-  return <Renderer data={event.content.data} className={className} />;
+  return <Renderer data={event.content.data} status={event.status} className={className} />;
 };
 

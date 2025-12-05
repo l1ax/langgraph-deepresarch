@@ -41,8 +41,10 @@ const AssistantElementRenderer = observer<{ element: Conversation.AssistantEleme
         <Bot className="h-4 w-4" />
       </AvatarFallback>
     </Avatar>
-    <div className="flex-1">
-      <EventView event={element.event} />
+    <div className="flex-1 space-y-3">
+      {element.events.map((event) => (
+        <EventView key={event.id} event={event} />
+      ))}
     </div>
   </div>
 ));

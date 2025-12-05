@@ -39,10 +39,24 @@ export class Executor {
     }
   }
 
-  /** 添加事件到列表 */
+  /** 根据 id 更新已存在的事件，如果不存在则添加 */
   @action.bound
-  private addEvent(event: Executor.OutputEvent) {
-    this.events.push(event);
+  private upsertEvent(data: Executor.WrappedEventData): Executor.OutputEvent {
+    const event: Executor.OutputEvent = {
+      id: data.id,
+      eventType: data.eventType,
+      status: data.status,
+      content: data.content,
+    };
+
+    const index = this.events.findIndex(e => e.id === data.id);
+    if (index !== -1) {
+      // 替换整个对象，确保 MobX 能检测到变化
+      this.events[index] = event;
+    } else {
+      this.events.push(event);
+    }
+    return event;
   }
 
   /** 清空事件列表 */
@@ -51,21 +65,15 @@ export class Executor {
     this.events = [];
   }
 
-  /** 处理接收到的 chunk 数据，返回创建的事件（如果有） */
+  /** 处理接收到的 chunk 数据，返回创建或更新的事件（如果有） */
   @action.bound
   private handleChunk(chunk: Executor.StreamChunk): Executor.OutputEvent | null {
-    // 检查是否是 custom 事件（后端发送的自定义事件）
     if (chunk.event === 'custom' && chunk.data) {
-      // 流式数据包裹了一层，直接取 data 中的事件数据
-      const wrappedData = chunk.data as Executor.WrappedEventData;
-      if (wrappedData.eventType && wrappedData.id) {
-        const event: Executor.OutputEvent = {
-          id: wrappedData.id, // 使用后端生成的 uuid
-          eventType: wrappedData.eventType,
-          content: wrappedData.content,
-        };
-        this.addEvent(event);
-        return event;
+      const data = chunk.data as Executor.WrappedEventData;
+      if (data.eventType && data.id) {
+        // 兼容旧数据，默认 status 为 finished
+        data.status = data.status || 'finished';
+        return this.upsertEvent(data);
       }
     }
     return null;
@@ -136,6 +144,9 @@ export namespace Executor {
   /** 事件类型 */
   export type EventType = 'clarify' | 'brief' | 'chat';
 
+  /** 事件状态 */
+  export type EventStatus = 'pending' | 'running' | 'finished' | 'error';
+
   /** 事件内容基础接口 */
   export interface EventContent<T = unknown> {
     /** 内容类型 */
@@ -160,6 +171,8 @@ export namespace Executor {
     id: string;
     /** 事件类型 */
     eventType: EventType;
+    /** 事件状态 */
+    status: EventStatus;
     /** 事件内容 */
     content: EventContent<T>;
   }
@@ -170,6 +183,8 @@ export namespace Executor {
     id: string;
     /** 事件类型 */
     eventType: EventType;
+    /** 事件状态 */
+    status: EventStatus;
     /** 事件内容 */
     content: EventContent<T>;
   }
@@ -214,11 +229,17 @@ export namespace Executor {
    * 创建 Chat 事件数据（前端本地创建，用于欢迎消息、错误消息等）
    * @param id 事件唯一标识
    * @param message 消息内容
+   * @param status 事件状态（默认 finished）
    */
-  export function createChatEvent(id: string, message: string): OutputEvent<ChatEventData> {
+  export function createChatEvent(
+    id: string,
+    message: string,
+    status: EventStatus = 'finished'
+  ): OutputEvent<ChatEventData> {
     return {
       id,
       eventType: 'chat',
+      status,
       content: {
         contentType: 'text',
         data: { message },

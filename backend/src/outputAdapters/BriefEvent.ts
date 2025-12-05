@@ -16,6 +16,7 @@ export class BriefEvent extends BaseEvent<BriefEvent.IContent> {
         return {
             id: this.id,
             eventType: this.eventType,
+            status: this.status,
             content: this.content,
         };
     }

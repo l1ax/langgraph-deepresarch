@@ -58,7 +58,7 @@ export class DeepResearchPageStore {
           'welcome',
           '你好！我是 DeepResearch 助手。请告诉我你想研究什么主题？'
         );
-        conversation.addAssistantEvent(welcomeEvent);
+        conversation.addStandaloneAssistantEvent(welcomeEvent);
       }
     } catch (error) {
       console.error('Failed to initialize client:', error);
@@ -73,18 +73,19 @@ export class DeepResearchPageStore {
         `error-${Date.now()}`,
         content
       );
-      this.currentConversation.addAssistantEvent(errorEvent);
+      // 错误消息添加到当前的助手元素中
+      this.currentConversation.addEventToCurrentAssistant(errorEvent);
     }
   }
 
   /**
    * 事件创建后的回调方法
-   * 将 executor 创建的事件包装成 element 添加到 conversation
+   * 将 event 添加到当前助手元素
    */
   @action.bound
   private handleEventCreated(event: Executor.OutputEvent) {
     if (this.currentConversation) {
-      this.currentConversation.addAssistantEvent(event);
+      this.currentConversation.addEventToCurrentAssistant(event);
     }
   }
 
@@ -95,7 +96,7 @@ export class DeepResearchPageStore {
 
     const userMessageContent = this.inputValue;
 
-    // 添加用户消息到当前会话
+    // 添加用户消息到当前会话（会自动创建新的助手元素）
     this.currentConversation.addUserMessage(userMessageContent);
     this.clearInput();
 
@@ -110,6 +111,9 @@ export class DeepResearchPageStore {
       this.addErrorMessage(
         '抱歉，处理您的请求时出现错误。请确保后端服务已启动 (http://localhost:2024)。'
       );
+    } finally {
+      // 完成当前助手元素的接收
+      this.currentConversation?.finishCurrentAssistant();
     }
   }
 

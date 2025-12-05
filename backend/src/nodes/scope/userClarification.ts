@@ -22,42 +22,61 @@ export async function clarifyWithUser(
 ): Promise<Command> {
   const event = new ClarifyEvent();
 
+  // 发送 pending 状态
+  if (config.writer) {
+    config.writer(event.setStatus('pending').toJSON());
+  }
+
   const promptContent = clarifyWithUserInstructions
     .replace('{messages}', getBufferString(state.messages || []))
     .replace('{date}', getTodayStr());
 
-  const response = await deepSeek.invoke({
-    messages: [
-      {
-        role: 'user',
-        content: promptContent,
-      },
-    ],
-    response_format: { type: 'json_object' },
-  });
-
-  // Parse the structured output
-  const clarification: ClarifyWithUser = JSON.parse(response as string);
-
-  event.content.data = clarification;
+  // 发送 running 状态
   if (config.writer) {
-    config.writer(event.toJSON());
+    config.writer(event.setStatus('running').toJSON());
   }
 
-  // Route based on clarification need
-  if (clarification.need_clarification) {
-    return new Command({
-      goto: "__end__",
-      update: {
-        messages: [new AIMessage({ content: clarification.question })],
-      },
+  try {
+    const response = await deepSeek.invoke({
+      messages: [
+        {
+          role: 'user',
+          content: promptContent,
+        },
+      ],
+      response_format: { type: 'json_object' },
     });
-  } else {
-    return new Command({
-      goto: "write_research_brief",
-      update: {
-        messages: [new AIMessage({ content: clarification.verification })],
-      },
-    });
+
+    // Parse the structured output
+    const clarification: ClarifyWithUser = JSON.parse(response as string);
+
+    event.content.data = clarification;
+    // 发送 finished 状态
+    if (config.writer) {
+      config.writer(event.setStatus('finished').toJSON());
+    }
+
+    // Route based on clarification need
+    if (clarification.need_clarification) {
+      return new Command({
+        goto: "__end__",
+        update: {
+          messages: [new AIMessage({ content: clarification.question })],
+        },
+      });
+    } else {
+      return new Command({
+        goto: "write_research_brief",
+        update: {
+          messages: [new AIMessage({ content: clarification.verification })],
+        },
+      });
+    }
+  } catch (error) {
+    // 发送 error 状态
+    if (config.writer) {
+      config.writer(event.setStatus('error').toJSON());
+    }
+    throw error;
   }
 }

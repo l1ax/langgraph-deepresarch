@@ -2,19 +2,76 @@
 
 import React from 'react';
 import { observer } from 'mobx-react-lite';
-import { MessageCircleQuestion, CheckCircle2 } from 'lucide-react';
+import { MessageCircleQuestion, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Executor } from '@/stores';
 import { EventRendererProps } from '@/services';
 
 /**
  * ClarifyEvent 渲染器组件
+ * - 如果 status 为 pending/running，显示加载状态
+ * - 如果 status 为 error，显示错误状态
  * - 如果 need_clarification 为 true，显示澄清问题
  * - 如果 need_clarification 为 false，显示验证信息提示
  */
 export const ClarifyEventRenderer = observer(
-  ({ data, className }: EventRendererProps<Executor.ClarifyEventData>) => {
+  ({ data, status, className }: EventRendererProps<Executor.ClarifyEventData>) => {
     const { need_clarification, question, verification } = data;
+
+    const isPending = status === 'pending';
+    const isRunning = status === 'running';
+    const isError = status === 'error';
+    const isLoading = isPending || isRunning;
+
+    // 加载状态
+    if (isLoading) {
+      return (
+        <div
+          className={cn(
+            'flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm animate-pulse',
+            'dark:border-slate-700 dark:bg-slate-900/30',
+            className
+          )}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              {isPending ? '准备分析...' : '正在分析您的需求...'}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              请稍候，正在理解您的研究意图
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 错误状态
+    if (isError) {
+      return (
+        <div
+          className={cn(
+            'flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm',
+            'dark:border-red-900/50 dark:bg-red-950/30',
+            className
+          )}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400">
+            <AlertCircle className="h-4 w-4" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              分析失败
+            </p>
+            <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">
+              分析您的需求时发生错误，请重试。
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     if (need_clarification) {
       // 需要澄清：显示问题

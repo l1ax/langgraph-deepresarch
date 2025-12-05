@@ -18,6 +18,7 @@ export class ClarifyEvent extends BaseEvent<ClarifyEvent.IContent> {
         return {
             id: this.id,
             eventType: this.eventType,
+            status: this.status,
             content: this.content,
         };
     }

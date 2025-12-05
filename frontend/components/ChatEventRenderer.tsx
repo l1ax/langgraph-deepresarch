@@ -13,8 +13,9 @@ import remarkGfm from 'remark-gfm';
  * 用于渲染纯文字消息（欢迎消息、错误消息等）
  */
 export const ChatEventRenderer = observer(
-  ({ data, className }: EventRendererProps<Executor.ChatEventData>) => {
+  ({ data, status: _status, className }: EventRendererProps<Executor.ChatEventData>) => {
     const { message } = data;
+    // Chat 消息通常都是 finished 状态，status 参数保留供未来扩展
 
     return (
       <div

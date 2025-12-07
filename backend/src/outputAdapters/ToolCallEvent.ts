@@ -11,8 +11,8 @@ export class ToolCallEvent extends BaseEvent<ToolCallEvent.IContent> {
         },
     };
 
-    constructor() {
-        super('tool_call');
+    constructor(role: BaseEvent.RoleName) {
+        super(BaseEvent.createEventType(role, 'tool_call'));
     }
 
     /** 设置工具调用信息 */

@@ -1,6 +1,7 @@
 import { observable, action, flow, computed, makeObservable } from 'mobx';
 import { Executor } from './Executor';
 import { Conversation } from './Conversation';
+import { AnyEvent, ChatEvent } from './events';
 
 /**
  * DeepResearchPageStore
@@ -54,7 +55,7 @@ export class DeepResearchPageStore {
       if (this.executor.threadId) {
         const conversation = this.createConversation(this.executor.threadId);
         // 添加欢迎消息
-        const welcomeEvent = Executor.createChatEvent(
+        const welcomeEvent = ChatEvent.create(
           'welcome',
           '你好！我是 DeepResearch 助手。请告诉我你想研究什么主题？'
         );
@@ -69,7 +70,7 @@ export class DeepResearchPageStore {
   @action.bound
   private addErrorMessage(content: string) {
     if (this.currentConversation) {
-      const errorEvent = Executor.createChatEvent(
+      const errorEvent = ChatEvent.create(
         `error-${Date.now()}`,
         content
       );
@@ -83,14 +84,15 @@ export class DeepResearchPageStore {
    * 将 event 添加到当前助手元素
    */
   @action.bound
-  private handleEventCreated(event: Executor.OutputEvent) {
+  private handleEventCreated(event: AnyEvent) {
     if (this.currentConversation) {
       this.currentConversation.addEventToCurrentAssistant(event);
     }
   }
 
   /** 提交用户消息并处理流式响应 */
-  async handleSubmit() {
+  @flow.bound
+  *handleSubmit() {
     if (!this.inputValue.trim() || !this.executor.client || !this.executor.threadId) return;
     if (!this.currentConversation) return;
 
@@ -102,7 +104,7 @@ export class DeepResearchPageStore {
 
     try {
       // 调用 executor，传入事件创建回调
-      await this.executor.invoke(
+      yield this.executor.invoke(
         userMessageContent,
         this.handleEventCreated
       );

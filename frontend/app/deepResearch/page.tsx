@@ -8,18 +8,18 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { DeepResearchPageStore, Executor, Conversation } from '@/stores';
+import { DeepResearchPageStore, Conversation, AnyEvent, ClarifyEvent, BriefEvent, ChatEvent, ToolCallEvent } from '@/stores';
 import { EventRendererRegistry, EventView } from '@/services';
 import { ClarifyEventRenderer } from '@/components/ClarifyEventRenderer';
 import { BriefEventRenderer } from '@/components/BriefEventRenderer';
 import { ChatEventRenderer } from '@/components/ChatEventRenderer';
 import { ToolCallEventRenderer } from '@/components/ToolCallEventRenderer';
 
-// 注册渲染器
-EventRendererRegistry.register<Executor.ClarifyEventData>('clarify', ClarifyEventRenderer);
-EventRendererRegistry.register<Executor.BriefEventData>('brief', BriefEventRenderer);
-EventRendererRegistry.register<Executor.ChatEventData>('chat', ChatEventRenderer);
-EventRendererRegistry.register<Executor.ToolCallEventData>('tool_call', ToolCallEventRenderer);
+// 按 subType 注册渲染器
+EventRendererRegistry.register<ClarifyEvent.IData>('clarify', ClarifyEventRenderer);
+EventRendererRegistry.register<BriefEvent.IData>('brief', BriefEventRenderer);
+EventRendererRegistry.register<ChatEvent.IData>('chat', ChatEventRenderer);
+EventRendererRegistry.register<ToolCallEvent.IData>('tool_call', ToolCallEventRenderer);
 
 /** 用户消息元素渲染组件 */
 const UserElementRenderer = observer<{ element: Conversation.UserElement }>(({ element }) => (
@@ -36,15 +36,16 @@ const UserElementRenderer = observer<{ element: Conversation.UserElement }>(({ e
 ));
 
 /** 工具调用组渲染组件 */
-const ToolCallGroupRenderer = observer<{ events: Executor.OutputEvent[] }>(({ events }) => {
+const ToolCallGroupRenderer = observer<{ events: AnyEvent[] }>(({ events }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // 自动滚动到底部
+  const statusesKey = events.map(e => e.status).join(',');
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [events.length, events[events.length - 1]?.status]);
+  }, [events.length, statusesKey]);
 
   return (
     <div className="rounded-lg border bg-muted/30 p-2">
@@ -53,7 +54,7 @@ const ToolCallGroupRenderer = observer<{ events: Executor.OutputEvent[] }>(({ ev
         className="max-h-[240px] overflow-y-auto space-y-1 pr-1 custom-scrollbar scroll-smooth"
       >
         {events.map((event) => (
-          <EventView key={event.id} event={event} />
+          <EventView key={Conversation.getEventKey(event)} event={event} />
         ))}
       </div>
     </div>
@@ -62,29 +63,8 @@ const ToolCallGroupRenderer = observer<{ events: Executor.OutputEvent[] }>(({ ev
 
 /** 助手消息元素渲染组件 */
 const AssistantElementRenderer = observer<{ element: Conversation.AssistantElement }>(({ element }) => {
-  // 对事件进行分组，连续的 tool_call 事件合并为一组
-  const groupedEvents = useMemo(() => {
-    const groups: (Executor.OutputEvent | { type: 'tool_group', events: Executor.OutputEvent[] })[] = [];
-    let currentToolGroup: Executor.OutputEvent[] = [];
-
-    element.events.forEach((event) => {
-      if (event.eventType === 'tool_call') {
-        currentToolGroup.push(event);
-      } else {
-        if (currentToolGroup.length > 0) {
-          groups.push({ type: 'tool_group', events: [...currentToolGroup] });
-          currentToolGroup = [];
-        }
-        groups.push(event);
-      }
-    });
-
-    if (currentToolGroup.length > 0) {
-      groups.push({ type: 'tool_group', events: [...currentToolGroup] });
-    }
-
-    return groups;
-  }, [element.events.length, element.events]);
+  // 使用数据层的方法对事件进行分组
+  const groupedEvents = Conversation.groupEvents(element);
 
   return (
     <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
@@ -94,13 +74,16 @@ const AssistantElementRenderer = observer<{ element: Conversation.AssistantEleme
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 space-y-3 min-w-0">
-        {groupedEvents.map((group, index) => {
-          if ('type' in group && group.type === 'tool_group') {
-            return <ToolCallGroupRenderer key={`group-${group.events[0].id}`} events={group.events} />;
+        {groupedEvents.map((group) => {
+          if (group.type === 'tool_group') {
+            return (
+              <ToolCallGroupRenderer 
+                key={Conversation.getToolGroupKey(group.events)} 
+                events={group.events} 
+              />
+            );
           }
-          // 这里 group 就是 OutputEvent
-          const event = group as Executor.OutputEvent;
-          return <EventView key={event.id} event={event} />;
+          return <EventView key={Conversation.getEventKey(group.event)} event={group.event} />;
         })}
       </div>
     </div>

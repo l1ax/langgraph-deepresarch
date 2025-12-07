@@ -10,10 +10,12 @@
  */
 
 import { ToolMessage, isToolMessage } from '@langchain/core/messages';
+import { LangGraphRunnableConfig } from '@langchain/langgraph';
 import { StateAnnotation } from '../../state';
 import { researchAgentGraph } from '../../graph/researchAgentGraph';
 import { HumanMessage } from '@langchain/core/messages';
 import { thinkTool } from '../../tools';
+import { ToolCallEvent } from '../../outputAdapters';
 
 // 系统常量 - 应与 supervisor.ts 中的值匹配
 const maxResearcherIterations = 6;
@@ -36,7 +38,10 @@ function getNotesFromToolCalls(supervisorMessages: any[]): string[] {
  *
  * 执行监督器决策并管理研究代理的生命周期。
  */
-export async function supervisorTools(state: typeof StateAnnotation.State) {
+export async function supervisorTools(
+    state: typeof StateAnnotation.State,
+    config?: LangGraphRunnableConfig
+) {
     const supervisorMessages = state.supervisor_messages || [];
     const researchIterations = state.research_iterations || 0;
     const mostRecentMessage = supervisorMessages[supervisorMessages.length - 1];
@@ -67,12 +72,34 @@ export async function supervisorTools(state: typeof StateAnnotation.State) {
         shouldEnd = true;
     }
 
+    // 获取 tool_calls 并为每个创建 ToolCallEvent
+    // 使用 Map 存储 tool_call_id -> event 的映射，方便后续匹配结果
+    const toolCallEventsMap = new Map<string, ToolCallEvent>();
+
     // 执行所有工具调用
     try {
         // 获取工具调用数组
         const toolCalls = 'tool_calls' in mostRecentMessage && Array.isArray(mostRecentMessage.tool_calls)
             ? mostRecentMessage.tool_calls
             : [];
+
+        // 为每个工具调用创建并发送 running 状态的 ToolCallEvent
+        for (const toolCall of toolCalls) {
+            const event = new ToolCallEvent('supervisor');
+            const toolCallId = toolCall.id || '';
+            event.setToolCall(
+                toolCall.name,
+                toolCall.args,
+                toolCallId
+            );
+
+            // 发送 running 状态
+            if (config?.writer) {
+                config.writer(event.setStatus('running').toJSON());
+            }
+
+            toolCallEventsMap.set(toolCallId, event);
+        }
 
         // 将 think_tool 调用与其他调用分开
         const thinkToolCalls = toolCalls.filter(
@@ -90,23 +117,40 @@ export async function supervisorTools(state: typeof StateAnnotation.State) {
         // 处理 think_tool 调用（同步）
         for (const toolCall of thinkToolCalls) {
             const observation = await thinkTool.invoke(toolCall.args);
+            const toolCallId = toolCall.id || '';
             toolMessages.push(
                 new ToolMessage({
                     content: String(observation),
-                    tool_call_id: toolCall.id,
+                    tool_call_id: toolCallId,
                 })
             );
+            
+            // 发送 finished 状态
+            const event = toolCallEventsMap.get(toolCallId);
+            if (event && config?.writer) {
+                event.setToolResult(observation);
+                config.writer(event.setStatus('finished').toJSON());
+            }
         }
 
         // 处理 ResearchComplete 调用
         for (const toolCall of researchCompleteCalls) {
+            const toolCallId = toolCall.id || '';
+            const resultContent = 'Research marked as complete';
             toolMessages.push(
                 new ToolMessage({
-                    content: 'Research marked as complete',
-                    tool_call_id: toolCall.id,
+                    content: resultContent,
+                    tool_call_id: toolCallId,
                 })
             );
             shouldEnd = true;
+            
+            // 发送 finished 状态
+            const event = toolCallEventsMap.get(toolCallId);
+            if (event && config?.writer) {
+                event.setToolResult(resultContent);
+                config.writer(event.setStatus('finished').toJSON());
+            }
         }
 
         // 处理 ConductResearch 调用（异步）
@@ -121,7 +165,7 @@ export async function supervisorTools(state: typeof StateAnnotation.State) {
                         }),
                     ],
                     research_topic: toolCall.args.research_topic,
-                })
+                }, config)
             );
 
             // 等待所有研究完成
@@ -133,10 +177,19 @@ export async function supervisorTools(state: typeof StateAnnotation.State) {
             // 监督器稍后通过 get_notes_from_tool_calls() 检索这些结果
             const researchToolMessages = toolResults.map((result: any, index: number) => {
                 const toolCall = conductResearchCalls[index];
+                const toolCallId = toolCall.id || '';
+                const resultContent = result.compressed_research || 'Error synthesizing research report';
+                
+                // 发送 finished 状态
+                const event = toolCallEventsMap.get(toolCallId);
+                if (event && config?.writer) {
+                    event.setToolResult(resultContent);
+                    config.writer(event.setStatus('finished').toJSON());
+                }
+                
                 return new ToolMessage({
-                    content:
-                        result.compressed_research || 'Error synthesizing research report',
-                    tool_call_id: toolCall.id,
+                    content: resultContent,
+                    tool_call_id: toolCallId,
                 });
             });
 
@@ -149,24 +202,41 @@ export async function supervisorTools(state: typeof StateAnnotation.State) {
         } else if (conductResearchCalls.length > 0 && shouldEnd) {
             // 如果已超过迭代次数但还有 ConductResearch 调用，返回错误响应
             for (const toolCall of conductResearchCalls) {
+                const toolCallId = toolCall.id || '';
+                const resultContent = 'Research iteration limit reached. Unable to conduct further research.';
                 toolMessages.push(
                     new ToolMessage({
-                        content: 'Research iteration limit reached. Unable to conduct further research.',
-                        tool_call_id: toolCall.id,
+                        content: resultContent,
+                        tool_call_id: toolCallId,
                     })
                 );
+                
+                // 发送 finished 状态
+                const event = toolCallEventsMap.get(toolCallId);
+                if (event && config?.writer) {
+                    event.setToolResult(resultContent);
+                    config.writer(event.setStatus('finished').toJSON());
+                }
             }
         }
     } catch (error) {
         console.error('Error in supervisor tools:', error);
+        // 发送 error 状态
+        for (const event of toolCallEventsMap.values()) {
+            if (config?.writer) {
+                config.writer(event.setStatus('error').toJSON());
+            }
+        }
         shouldEnd = true;
     }
 
     // 具有适当状态更新的单个返回点
     if (shouldEnd) {
         // 即使要结束，也需要返回 toolMessages 以确保所有 tool_calls 都有响应
+        const notes = getNotesFromToolCalls([...supervisorMessages, ...toolMessages]);
+        console.log('[supervisorTools] shouldEnd=true, returning notes:', notes);
         const result: any = {
-            notes: getNotesFromToolCalls([...supervisorMessages, ...toolMessages]),
+            notes,
             research_brief: state.research_brief || '',
         };
 

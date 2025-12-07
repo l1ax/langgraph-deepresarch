@@ -10,12 +10,13 @@
 
 import { SystemMessage } from '@langchain/core/messages';
 import { ChatDeepSeek } from '@langchain/deepseek';
+import { LangGraphRunnableConfig } from '@langchain/langgraph';
 import { StateAnnotation } from '../../state';
 import { leadResearcherPrompt } from '../../prompts';
-import { getTodayStr } from '../../utils';
+import { getTodayStr, extractContent } from '../../utils';
 import { thinkTool, conductResearchTool, researchCompleteTool } from '../../tools';
+import { ChatEvent } from '../../outputAdapters';
 import dotenv from 'dotenv';
-import type { RunnableConfig } from '@langchain/core/runnables';
 dotenv.config();
 
 // 配置监督器模型
@@ -48,7 +49,7 @@ const supervisorModelWithTools = supervisorModel.bindTools(supervisorTools);
  *
  * 协调研究活动并决定下一步行动。
  */
-export async function supervisor(state: typeof StateAnnotation.State, config?: RunnableConfig) {
+export async function supervisor(state: typeof StateAnnotation.State, config?: LangGraphRunnableConfig) {
     const supervisorMessages = state.supervisor_messages || [];
 
     // 使用当前日期和约束准备系统消息
@@ -61,6 +62,14 @@ export async function supervisor(state: typeof StateAnnotation.State, config?: R
 
     // 对下一步研究步骤做出决策
     const response = await supervisorModelWithTools.invoke(messages, config);
+
+    // 如果 LLM 返回了文本内容（不是工具调用），发送 ChatEvent
+    const textContent = extractContent(response.content);
+    if (textContent && config?.writer) {
+        const chatEvent = new ChatEvent('supervisor');
+        chatEvent.setMessage(textContent);
+        config.writer(chatEvent.setStatus('finished').toJSON());
+    }
 
     return {
         supervisor_messages: [response],

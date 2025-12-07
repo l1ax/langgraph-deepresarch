@@ -4,7 +4,7 @@ import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { FileText, BookOpen, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Executor } from '@/stores';
+import { BriefEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -14,7 +14,7 @@ import remarkGfm from 'remark-gfm';
  * 用于展示研究概要信息
  */
 export const BriefEventRenderer = observer(
-  ({ data, status, className }: EventRendererProps<Executor.BriefEventData>) => {
+  ({ data, status, roleName: _roleName, className }: EventRendererProps<BriefEvent.IData>) => {
     const { research_brief } = data;
 
     const isPending = status === 'pending';

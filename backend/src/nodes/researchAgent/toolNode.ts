@@ -35,7 +35,7 @@ export async function researchToolNode(
         lastMessage.tool_calls.length > 0
     ) {
         for (const toolCall of lastMessage.tool_calls) {
-            const event = new ToolCallEvent();
+            const event = new ToolCallEvent('researcher');
             const toolCallId = toolCall.id || '';
             event.setToolCall(
                 toolCall.name,

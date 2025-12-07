@@ -11,7 +11,7 @@ export class ClarifyEvent extends BaseEvent<ClarifyEvent.IContent> {
     };
 
     constructor() {
-        super('clarify');
+        super('/ai/clarify');
     }
 
     toJSON(): Record<string, unknown> {

@@ -9,7 +9,7 @@ export class BriefEvent extends BaseEvent<BriefEvent.IContent> {
     };
 
     constructor() {
-        super('brief');
+        super('/ai/brief');
     }
 
     toJSON(): Record<string, unknown> {

@@ -1,12 +1,14 @@
 import React from 'react';
-import { Executor } from '@/stores';
+import { BaseEvent, AnyEvent } from '@/stores';
 
 /** 事件渲染器组件 Props */
 export interface EventRendererProps<T = unknown> {
   /** 事件数据 */
   data: T;
   /** 事件状态 */
-  status: Executor.EventStatus;
+  status: BaseEvent.EventStatus;
+  /** 角色名称 */
+  roleName: BaseEvent.RoleName;
   /** 自定义类名 */
   className?: string;
 }
@@ -16,50 +18,50 @@ export type EventRenderer<T = unknown> = React.ComponentType<EventRendererProps<
 
 /**
  * EventRendererRegistry
- * 管理 eventType -> Renderer 的映射
- * 支持动态注册和获取渲染器
+ * 管理 subType -> Renderer 的映射
+ * 渲染器按 subType 注册，获取时根据 eventType 解析 subType 后查找
  */
 class EventRendererRegistryClass {
-  private renderers: Map<Executor.EventType, EventRenderer<unknown>> = new Map();
+  private renderers: Map<BaseEvent.SubType, EventRenderer<unknown>> = new Map();
 
   /**
    * 注册渲染器
-   * @param eventType 事件类型
+   * @param subType 事件子类型
    * @param renderer 渲染器组件
    */
-  register<T>(eventType: Executor.EventType, renderer: EventRenderer<T>): void {
-    this.renderers.set(eventType, renderer as EventRenderer<unknown>);
+  register<T>(subType: BaseEvent.SubType, renderer: EventRenderer<T>): void {
+    this.renderers.set(subType, renderer as EventRenderer<unknown>);
   }
 
   /**
-   * 获取渲染器
-   * @param eventType 事件类型
+   * 根据 subType 获取渲染器
+   * @param subType 事件子类型
    * @returns 渲染器组件，如果未注册则返回 undefined
    */
-  get<T>(eventType: Executor.EventType): EventRenderer<T> | undefined {
-    return this.renderers.get(eventType) as EventRenderer<T> | undefined;
+  get<T>(subType: BaseEvent.SubType): EventRenderer<T> | undefined {
+    return this.renderers.get(subType) as EventRenderer<T> | undefined;
   }
 
   /**
-   * 检查是否已注册某类型的渲染器
-   * @param eventType 事件类型
+   * 检查是否已注册某子类型的渲染器
+   * @param subType 事件子类型
    */
-  has(eventType: Executor.EventType): boolean {
-    return this.renderers.has(eventType);
+  has(subType: BaseEvent.SubType): boolean {
+    return this.renderers.has(subType);
   }
 
   /**
    * 注销渲染器
-   * @param eventType 事件类型
+   * @param subType 事件子类型
    */
-  unregister(eventType: Executor.EventType): boolean {
-    return this.renderers.delete(eventType);
+  unregister(subType: BaseEvent.SubType): boolean {
+    return this.renderers.delete(subType);
   }
 
   /**
-   * 获取所有已注册的事件类型
+   * 获取所有已注册的事件子类型
    */
-  getRegisteredTypes(): Executor.EventType[] {
+  getRegisteredTypes(): BaseEvent.SubType[] {
     return Array.from(this.renderers.keys());
   }
 }
@@ -72,16 +74,16 @@ export const EventRendererRegistry = new EventRendererRegistryClass();
  * 根据事件类型自动选择对应的渲染器进行渲染
  */
 export const EventView: React.FC<{
-  event: Executor.OutputEvent;
+  event: AnyEvent;
   className?: string;
 }> = ({ event, className }) => {
-  const Renderer = EventRendererRegistry.get(event.eventType);
+  const Renderer = EventRendererRegistry.get(event.subType);
 
   if (!Renderer) {
-    console.warn(`No renderer registered for event type: ${event.eventType}`);
+    console.warn(`No renderer registered for event subType: ${event.subType}`);
     return null;
   }
 
-  return <Renderer data={event.content.data} status={event.status} className={className} />;
+  return <Renderer data={event.content.data} status={event.status} roleName={event.roleName} className={className} />;
 };
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Wrench, ChevronDown, ChevronRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Executor } from '@/stores';
+import { ToolCallEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
 
 /**
@@ -118,7 +118,7 @@ function getToolDisplayName(toolName: string): string {
  * 用于展示工具调用信息
  */
 export const ToolCallEventRenderer = observer(
-  ({ data, status, className }: EventRendererProps<Executor.ToolCallEventData>) => {
+  ({ data, status, roleName: _roleName, className }: EventRendererProps<ToolCallEvent.IData>) => {
     const { tool_name, tool_arguments, tool_result } = data;
     const [isExpanded, setIsExpanded] = useState(false);
 

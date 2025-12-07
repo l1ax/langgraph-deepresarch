@@ -11,7 +11,7 @@ import { SystemMessage } from '@langchain/core/messages';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { ResearcherStateAnnotation } from '../../state';
 import { researchAgentPrompt } from '../../prompts';
-import { getTodayStr } from '../../utils';
+import { getTodayStr, extractContent } from '../../utils';
 import { tavilySearchTool, thinkTool } from '../../tools';
 import { ChatEvent } from '../../outputAdapters';
 import dotenv from 'dotenv';
@@ -31,27 +31,6 @@ const tools = [tavilySearchTool, thinkTool];
 
 const modelWithTools = model.bindTools(tools);
 
-/**
- * 从 LLM 响应中提取文本内容
- */
-function extractContent(content: unknown): string {
-    if (typeof content === 'string') {
-        return content;
-    }
-    if (Array.isArray(content)) {
-        return content
-            .map(block => {
-                if (typeof block === 'string') return block;
-                if (block && typeof block === 'object' && 'text' in block) {
-                    return (block as { text: string }).text;
-                }
-                return '';
-            })
-            .join('');
-    }
-    return '';
-}
-
 export async function researchLlmCall(
     state: typeof ResearcherStateAnnotation.State,
     config: LangGraphRunnableConfig
@@ -70,7 +49,7 @@ export async function researchLlmCall(
     console.log('textContent', textContent);
     console.log('content', response.content);
     if (textContent && config.writer) {
-        const chatEvent = new ChatEvent();
+        const chatEvent = new ChatEvent('researcher');
         chatEvent.setMessage(textContent);
         config.writer(chatEvent.setStatus('finished').toJSON());
     }

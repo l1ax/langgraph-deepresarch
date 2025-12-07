@@ -1,5 +1,5 @@
 import { observable, action, computed, makeObservable } from 'mobx';
-import { Executor } from './Executor';
+import { AnyEvent } from './events';
 
 /**
  * Conversation 类
@@ -45,7 +45,7 @@ export class Conversation {
 
   /** 添加独立的助手事件元素（用于欢迎消息等不需要用户提问的场景） */
   @action.bound
-  addStandaloneAssistantEvent(event: Executor.OutputEvent): Conversation.AssistantElement {
+  addStandaloneAssistantEvent(event: AnyEvent): Conversation.AssistantElement {
     const element: Conversation.AssistantElement = {
       id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       role: 'assistant',
@@ -58,7 +58,7 @@ export class Conversation {
 
   /** 将 event 添加或更新到当前助手元素 */
   @action.bound
-  addEventToCurrentAssistant(event: Executor.OutputEvent): void {
+  addEventToCurrentAssistant(event: AnyEvent): void {
     if (!this.currentAssistantElement) return;
 
     const index = this.currentAssistantElement.events.findIndex(e => e.id === event.id);
@@ -115,7 +115,7 @@ export namespace Conversation {
     /** 角色 */
     role: 'assistant';
     /** 助手回答事件列表（一次问答可能产生多个事件） */
-    events: Executor.OutputEvent[];
+    events: AnyEvent[];
     /** 时间戳 */
     timestamp: Date;
   }
@@ -131,5 +131,60 @@ export namespace Conversation {
   /** 类型守卫：判断是否为助手元素 */
   export function isAssistantElement(element: Element): element is AssistantElement {
     return element.role === 'assistant';
+  }
+
+  /** 
+   * 事件分组项类型
+   * 将连续的 tool_call 事件合并为一组，其他事件单独作为一项
+   */
+  export type GroupedEventItem = 
+    | { type: 'event', event: AnyEvent }
+    | { type: 'tool_group', events: AnyEvent[] };
+
+  /**
+   * 对助手元素的事件进行分组
+   * 连续的 tool_call 事件合并为一组，其他事件单独作为一项
+   * @param element 助手元素
+   * @returns 分组后的事件项数组
+   */
+  export function groupEvents(element: AssistantElement): GroupedEventItem[] {
+    const groups: GroupedEventItem[] = [];
+    let currentToolGroup: AnyEvent[] = [];
+
+    element.events.forEach((event) => {
+      if (event.subType === 'tool_call') {
+        currentToolGroup.push(event);
+      } else {
+        if (currentToolGroup.length > 0) {
+          groups.push({ type: 'tool_group', events: [...currentToolGroup] });
+          currentToolGroup = [];
+        }
+        groups.push({ type: 'event', event });
+      }
+    });
+
+    if (currentToolGroup.length > 0) {
+      groups.push({ type: 'tool_group', events: [...currentToolGroup] });
+    }
+
+    return groups;
+  }
+
+  /**
+   * 生成事件的唯一 key（用于 React key prop）
+   * 包含 id 和 status，确保状态变化时重新渲染
+   */
+  export function getEventKey(event: AnyEvent): string {
+    return `${event.id}-${event.status}`;
+  }
+
+  /**
+   * 生成工具组的唯一 key（用于 React key prop）
+   * 包含第一个事件的 id 和所有事件的 status，确保状态变化时重新渲染
+   */
+  export function getToolGroupKey(events: AnyEvent[]): string {
+    if (events.length === 0) return 'empty-group';
+    const statuses = events.map(e => e.status).join(',');
+    return `group-${events[0].id}-${statuses}`;
   }
 }

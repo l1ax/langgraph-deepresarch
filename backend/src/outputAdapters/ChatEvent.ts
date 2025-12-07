@@ -8,8 +8,8 @@ export class ChatEvent extends BaseEvent<ChatEvent.IContent> {
         },
     };
 
-    constructor() {
-        super('chat');
+    constructor(role: BaseEvent.RoleName) {
+        super(BaseEvent.createEventType(role, 'chat'));
     }
 
     /** 设置消息内容 */

@@ -4,7 +4,7 @@ import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { MessageCircleQuestion, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Executor } from '@/stores';
+import { ClarifyEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
 
 /**
@@ -15,7 +15,7 @@ import { EventRendererProps } from '@/services';
  * - 如果 need_clarification 为 false，显示验证信息提示
  */
 export const ClarifyEventRenderer = observer(
-  ({ data, status, className }: EventRendererProps<Executor.ClarifyEventData>) => {
+  ({ data, status, roleName: _roleName, className }: EventRendererProps<ClarifyEvent.IData>) => {
     const { need_clarification, question, verification } = data;
 
     const isPending = status === 'pending';

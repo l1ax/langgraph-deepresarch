@@ -3,7 +3,7 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { cn } from '@/lib/utils';
-import { Executor } from '@/stores';
+import { ChatEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,7 +13,7 @@ import remarkGfm from 'remark-gfm';
  * 用于渲染纯文字消息（欢迎消息、错误消息等）
  */
 export const ChatEventRenderer = observer(
-  ({ data, status: _status, className }: EventRendererProps<Executor.ChatEventData>) => {
+  ({ data, status: _status, roleName: _roleName, className }: EventRendererProps<ChatEvent.IData>) => {
     const { message } = data;
     // Chat 消息通常都是 finished 状态，status 参数保留供未来扩展
 

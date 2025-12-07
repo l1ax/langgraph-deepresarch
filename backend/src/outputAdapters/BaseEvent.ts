@@ -38,8 +38,38 @@ export namespace BaseEvent {
     /** 事件状态 */
     export type EventStatus = 'pending' | 'running' | 'finished' | 'error';
 
-    /** 事件类型 */
-    export type EventType = 'clarify' | 'brief' | 'tool_call' | 'chat';
+    /** 
+     * 角色名称
+     * - ai: 最普通的回复角色，用于 clarifyNode 和 briefGenerationNode
+     * - supervisor: 研究主管，用于 supervisor 节点
+     * - researcher: 研究员角色，用于 researchAgentGraph 中的 llm 节点
+     */
+    export type RoleName = 'ai' | 'supervisor' | 'researcher';
+
+    /** 
+     * 基础事件子类型
+     */
+    export type BaseEventSubType = 'clarify' | 'brief' | 'chat' | 'tool_call';
+
+    /** 
+     * 事件类型，格式为 /{roleName}/{type}
+     * - /ai/clarify: 澄清需求事件
+     * - /ai/brief: 研究概要事件
+     * - /ai/chat: AI 对话事件
+     * - /ai/tool_call: AI 工具调用事件
+     * - /supervisor/chat: 研究主管对话事件
+     * - /supervisor/tool_call: 研究主管工具调用事件
+     * - /researcher/chat: 研究员对话事件
+     * - /researcher/tool_call: 研究员工具调用事件
+     */
+    export type EventType = `/${RoleName}/${BaseEventSubType}`;
+
+    /** 
+     * 生成事件类型的辅助函数
+     */
+    export function createEventType(role: RoleName, subType: BaseEventSubType): EventType {
+        return `/${role}/${subType}` as EventType;
+    }
 
     /** 事件内容 */
     export interface IContent {

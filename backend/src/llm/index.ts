@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/index";
+import { ChatCompletionCreateParamsNonStreaming, ChatCompletionCreateParamsStreaming } from "openai/resources/index";
 import { wrapOpenAI } from "langsmith/wrappers";
 import dotenv from "dotenv";
 dotenv.config();
@@ -28,6 +28,22 @@ class DeepSeek {
         }
         const completion = await this.openai.chat.completions.create(defaultParams);
         return completion.choices[0].message.content;
+    }
+
+    async *stream(params: Partial<ChatCompletionCreateParamsStreaming> & {messages: ChatCompletionCreateParamsStreaming['messages']}) {
+        const defaultParams: ChatCompletionCreateParamsStreaming = {
+            model: "deepseek-chat",
+            temperature: 0,
+            stream: true,
+            ...params
+        }
+        const stream = await this.openai.chat.completions.create(defaultParams);
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+                yield content;
+            }
+        }
     }
 }
 

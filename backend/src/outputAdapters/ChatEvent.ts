@@ -17,20 +17,10 @@ export class ChatEvent extends BaseEvent<ChatEvent.IContent> {
         this.content.data.message = message;
         return this;
     }
-
-    toJSON(): Record<string, unknown> {
-        return {
-            id: this.id,
-            eventType: this.eventType,
-            status: this.status,
-            content: this.content,
-            ...(this.parentId && { parentId: this.parentId }),
-        };
-    }
 }
 
 export namespace ChatEvent {
-    export interface IContent {
+    export interface IContent extends BaseEvent.IContent {
         contentType: 'text';
         data: {
             /** 消息内容 */

@@ -83,10 +83,19 @@ export namespace BaseEvent {
     return `/${roleName}/${subType}`;
   }
 
+  /**
+   * 内容聚合规则
+   * - concat: 拼接内容（用于流式传输）
+   * - replace: 替换内容（默认行为）
+   */
+  export type AggregateRule = 'concat' | 'replace';
+
   /** 事件内容基础接口 */
   export interface IContent {
     contentType: 'text';
     data: unknown;
+    /** 内容聚合规则（可选，默认为 replace） */
+    aggregateRule?: AggregateRule;
   }
 
   /** 后端发送的事件数据格式 */
@@ -97,6 +106,8 @@ export namespace BaseEvent {
     content: {
       contentType: 'text';
       data: T;
+      /** 内容聚合规则（可选，默认为 replace） */
+      aggregateRule?: AggregateRule;
     };
     /** 父事件 ID（可选，用于构建事件树） */
     parentId?: string;

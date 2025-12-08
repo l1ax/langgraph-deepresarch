@@ -28,20 +28,10 @@ export class ToolCallEvent extends BaseEvent<ToolCallEvent.IContent> {
         this.content.data.tool_result = result;
         return this;
     }
-
-    toJSON(): Record<string, unknown> {
-        return {
-            id: this.id,
-            eventType: this.eventType,
-            status: this.status,
-            content: this.content,
-            ...(this.parentId && { parentId: this.parentId }),
-        };
-    }
 }
 
 export namespace ToolCallEvent {
-    export interface IContent {
+    export interface IContent extends BaseEvent.IContent {
         contentType: 'text';
         data: {
             /** 工具名称 */

@@ -22,8 +22,7 @@ export namespace BriefEvent {
     research_brief: string;
   }
 
-  export interface IContent {
-    contentType: 'text';
+  export interface IContent extends BaseEvent.IContent {
     data: IData;
   }
 }

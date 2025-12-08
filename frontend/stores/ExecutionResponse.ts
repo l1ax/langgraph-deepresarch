@@ -27,16 +27,31 @@ export class ExecutionResponse {
   /** 添加或更新事件 */
   @action.bound
   upsertEvent(event: AnyEvent): void {
-    // 更新 treeView
-    this.treeView.upsertEvent(event);
-
     // 更新 events 数组
     const index = this.events.findIndex(e => e.id === event.id);
     if (index !== -1) {
+      const existingEvent = this.events[index];
+
+      // 检查是否需要聚合内容
+      if (event.content.aggregateRule === 'concat') {
+        // 拼接内容：将新数据拼接到已有数据
+        // 假设在concat模式下，data是string类型（不完整的JSON字符串）
+        const existingData = existingEvent.content.data;
+        const newData = event.content.data;
+
+        if (typeof existingData === 'string' && typeof newData === 'string') {
+          // 创建新的event对象，拼接data
+          event.content.data = existingData + newData;
+        }
+      }
+
       this.events[index] = event;
     } else {
       this.events.push(event);
     }
+
+    // 更新 treeView（使用可能已聚合后的event）
+    this.treeView.upsertEvent(event);
   }
 
   /** 标记执行完成 */

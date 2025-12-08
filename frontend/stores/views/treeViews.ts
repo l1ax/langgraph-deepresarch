@@ -62,7 +62,6 @@ export class TreeView {
                 } else {
                     // 如果父节点还不存在，先作为 topLevelEvent 添加（后续父节点出现时会移动）
                     // 但根据需求，这种情况应该不会发生，因为 topLevelEvent 应该先出现
-                    console.warn(`[TreeView] Parent node not found for event ${event.id}, parentId: ${event.parentId}`);
                     this.topLevelEventNodes.push(newNode);
                 }
             } else {

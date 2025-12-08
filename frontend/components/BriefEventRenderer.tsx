@@ -4,6 +4,7 @@ import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { FileText, BookOpen, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseIncompleteJson } from '@/lib/json-parser';
 import { BriefEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
 import { Streamdown } from 'streamdown';
@@ -14,7 +15,9 @@ import { Streamdown } from 'streamdown';
  */
 export const BriefEventRenderer = observer(
   ({ data, status, roleName: _roleName, className }: EventRendererProps<BriefEvent.IData>) => {
-    const { research_brief } = data;
+    // 解析可能不完整的JSON字符串
+    const parsedData = parseIncompleteJson<BriefEvent.IData>(data as BriefEvent.IData | string);
+    const { research_brief } = parsedData;
 
     const isPending = status === 'pending';
     const isRunning = status === 'running';
@@ -100,16 +103,31 @@ export const BriefEventRenderer = observer(
               : 'prose-headings:text-sky-800 dark:prose-headings:text-sky-200 prose-p:text-sky-700 dark:prose-p:text-sky-300 prose-li:text-sky-700 dark:prose-li:text-sky-300 prose-strong:text-sky-800 dark:prose-strong:text-sky-200'
           )}
         >
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400">
-              <span>{isPending ? '正在准备生成研究概要...' : '正在生成研究概要...'}</span>
-            </div>
-          ) : isError ? (
+          {isError ? (
             <p className="text-red-600 dark:text-red-400">生成研究概要时发生错误，请重试。</p>
+          ) : research_brief ? (
+            <div className="relative">
+              <Streamdown>{research_brief}</Streamdown>
+              {isRunning && (
+                <span className="inline-block w-0.5 h-4 ml-0.5 bg-sky-600 dark:bg-sky-400 animate-pulse" />
+              )}
+            </div>
           ) : (
-            <Streamdown>
-              {research_brief || '研究概要内容为空'}
-            </Streamdown>
+            <p className="text-sky-600/70 dark:text-sky-400/70 italic flex items-center gap-2">
+              {isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin inline-block" />
+                  正在准备生成研究概要...
+                </>
+              ) : isRunning ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin inline-block" />
+                  正在生成研究概要...
+                </>
+              ) : (
+                '研究概要内容为空'
+              )}
+            </p>
           )}
         </div>
       </div>

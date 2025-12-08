@@ -42,8 +42,7 @@ export namespace ChatEvent {
     message: string;
   }
 
-  export interface IContent {
-    contentType: 'text';
+  export interface IContent extends BaseEvent.IContent {
     data: IData;
   }
 }

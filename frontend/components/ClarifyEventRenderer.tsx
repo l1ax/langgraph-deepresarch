@@ -4,6 +4,7 @@ import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { MessageCircleQuestion, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseIncompleteJson } from '@/lib/json-parser';
 import { ClarifyEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
 
@@ -16,7 +17,9 @@ import { EventRendererProps } from '@/services';
  */
 export const ClarifyEventRenderer = observer(
   ({ data, status, roleName: _roleName, className }: EventRendererProps<ClarifyEvent.IData>) => {
-    const { need_clarification, question, verification } = data;
+    // 解析可能不完整的JSON字符串
+    const parsedData = parseIncompleteJson<ClarifyEvent.IData>(data as ClarifyEvent.IData | string);
+    const { need_clarification, question, verification } = parsedData;
 
     const isPending = status === 'pending';
     const isRunning = status === 'running';
@@ -41,7 +44,7 @@ export const ClarifyEventRenderer = observer(
               {isPending ? '准备分析...' : '正在分析您的需求...'}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              请稍候，正在理解您的研究意图
+              {verification || question || '请稍候，正在理解您的研究意图'}
             </p>
           </div>
         </div>

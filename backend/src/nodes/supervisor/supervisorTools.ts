@@ -89,6 +89,11 @@ export const supervisorTools = traceable(async (
 
         // 为每个工具调用创建并发送 running 状态的 ToolCallEvent
         for (const toolCall of toolCalls) {
+            // ConductResearch 调用不创建 ToolCallEvent，直接用 research group展示
+            if (toolCall.name === 'ConductResearch') {
+                continue;
+            }
+
             const event = new ToolCallEvent('supervisor');
             const toolCallId = toolCall.id || '';
             event.setToolCall(

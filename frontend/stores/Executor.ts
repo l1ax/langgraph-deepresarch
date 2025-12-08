@@ -61,54 +61,6 @@ export class Executor {
   ): AnyEvent {
     const event = createEventFromData(data);
 
-    // 检查事件是否已存在于 executionResponse 中
-    const existingEvent = executionResponse.events.find(e => e.id === data.id);
-    
-    if (existingEvent) {
-      // 更新已存在的事件
-      console.log(`[Executor] Updating event:`, {
-        id: data.id,
-        oldStatus: existingEvent.status,
-        newStatus: event.status,
-        eventType: event.eventType,
-        subType: event.subType
-      });
-    } else {
-      // 检查是否是 tool_call 事件，如果是，检查是否有相同 tool_call_id 但不同 id 的事件
-      const { subType } = BaseEvent.parseEventType(data.eventType);
-      if (subType === 'tool_call') {
-        const toolData = (data.content.data as any);
-        const toolCallId = toolData?.tool_call_id;
-        if (toolCallId) {
-          const existingEventWithSameToolCallId = executionResponse.events.find(e => {
-            if (e.subType === 'tool_call') {
-              const eToolData = (e.content.data as any);
-              return eToolData?.tool_call_id === toolCallId && e.id !== data.id;
-            }
-            return false;
-          });
-          
-          if (existingEventWithSameToolCallId) {
-            console.warn(`[Executor] Found existing event with same tool_call_id but different id:`, {
-              existingId: existingEventWithSameToolCallId.id,
-              existingStatus: existingEventWithSameToolCallId.status,
-              newId: data.id,
-              newStatus: data.status,
-              tool_call_id: toolCallId,
-              tool_name: toolData?.tool_name
-            });
-          }
-        }
-      }
-      
-      console.log(`[Executor] Adding new event:`, {
-        id: data.id,
-        status: event.status,
-        eventType: event.eventType,
-        subType: event.subType
-      });
-    }
-
     // 更新 executionResponse
     executionResponse.upsertEvent(event);
     return event;
@@ -121,24 +73,11 @@ export class Executor {
     executionResponse: ExecutionResponse
   ): AnyEvent | null {
     if (chunk.event === 'custom' && chunk.data) {
+      console.log('chunk.data', chunk.data);
       const data = chunk.data as BaseEvent.IEventData<unknown>;
       if (data.eventType && data.id) {
         // 兼容旧数据，默认 status 为 finished
         data.status = data.status || 'finished';
-        
-        // 调试：检查是否是 ResearchComplete 的 tool_call
-        const { subType } = BaseEvent.parseEventType(data.eventType);
-        if (subType === 'tool_call') {
-          const toolData = (data.content.data as any);
-          if (toolData?.tool_name === 'ResearchComplete') {
-            console.log('[Executor] Received ResearchComplete tool_call event:', {
-              id: data.id,
-              status: data.status,
-              tool_name: toolData.tool_name,
-              tool_call_id: toolData.tool_call_id
-            });
-          }
-        }
         
         return this.upsertEvent(data, executionResponse);
       }
@@ -180,10 +119,7 @@ export class Executor {
         },
       });
 
-      let chunkCount = 0;
       for await (const chunk of stream) {
-        chunkCount++;
-        console.log(`[Executor] Chunk #${chunkCount}:`, chunk);
         this.handleChunk(chunk as StreamChunk, response);
       }
 

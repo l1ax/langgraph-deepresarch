@@ -4,12 +4,25 @@
 
 import { AIMessage, getBufferString } from "@langchain/core/messages";
 import { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
-import deepSeek from '../../llm';
+import { ChatDeepSeek } from '@langchain/deepseek';
 import { clarifyWithUserInstructions } from '../../prompts';
 import { getTodayStr } from '../../utils';
 import { StateAnnotation } from '../../state';
 import {ClarifyEvent} from '../../outputAdapters';
 import {traceable} from 'langsmith/traceable';
+import dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+dotenv.config();
+
+const deepSeekChat = new ChatDeepSeek({
+    model: 'deepseek-chat',
+    temperature: 0,
+    configuration: {
+        baseURL: process.env.DEEPSEEK_BASE_URL,
+        apiKey: process.env.DEEPSEEK_API_KEY
+    },
+});
 
 export interface ClarifyWithUser {
   need_clarification: boolean;
@@ -38,20 +51,39 @@ export const clarifyWithUser = traceable(async (
   }
 
   try {
-    const response = await deepSeek.invoke({
-      messages: [
-        {
-          role: 'user',
-          content: promptContent,
-        },
-      ],
+    // 使用stream方式调用LLM
+    let fullResponse = '';
+    const stream = await deepSeekChat.stream([
+      {
+        role: 'user',
+        content: promptContent,
+      },
+    ], {
       response_format: { type: 'json_object' },
     });
 
-    // Parse the structured output
-    const clarification: ClarifyWithUser = JSON.parse(response as string);
+    for await (const chunk of stream) {
+      const content = chunk.content;
+      if (content && typeof content === 'string' && content.length > 0) {
+        
+        fullResponse += content;
+        fs.appendFileSync(path.join(__dirname, 'clarifyWithUser.json'), content);
 
+        // 发送流式更新（带aggregateRule: 'concat'）
+        if (config.writer) {
+          event.content.data = content;
+          event.content.aggregateRule = 'concat';
+          config.writer(event.setStatus('running').toJSON());
+        }
+      }
+    }
+
+    // 解析完整的JSON
+    const clarification: ClarifyWithUser = JSON.parse(fullResponse);
+
+    // 发送最终结果（使用完整的data）
     event.content.data = clarification;
+    event.content.aggregateRule = undefined;
     // 发送 finished 状态
     if (config.writer) {
       config.writer(event.setStatus('finished').toJSON());

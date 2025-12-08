@@ -13,20 +13,10 @@ export class GroupEvent extends BaseEvent<GroupEvent.IContent> {
     constructor(roleName: BaseEvent.RoleName) {
         super(BaseEvent.createEventType(roleName, 'group'));
     }
-
-    toJSON(): Record<string, unknown> {
-        return {
-            id: this.id,
-            eventType: this.eventType,
-            status: this.status,
-            content: this.content,
-            ...(this.parentId && { parentId: this.parentId }),
-        };
-    }
 }
 
 export namespace GroupEvent {
-    export interface IContent {
+    export interface IContent extends BaseEvent.IContent {
         contentType: 'text';
         data: null;
     }

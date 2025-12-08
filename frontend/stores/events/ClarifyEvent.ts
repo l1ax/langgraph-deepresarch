@@ -34,8 +34,7 @@ export namespace ClarifyEvent {
     verification: string;
   }
 
-  export interface IContent {
-    contentType: 'text';
+  export interface IContent extends BaseEvent.IContent {
     data: IData;
   }
 }

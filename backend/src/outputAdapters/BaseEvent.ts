@@ -17,7 +17,19 @@ export abstract class BaseEvent<T extends BaseEvent.IContent> implements BaseEve
 
     abstract content: T;
 
-    abstract toJSON(): Record<string, unknown>;
+    /**
+     * 序列化为JSON对象
+     */
+    toJSON(): Record<string, unknown> {
+        return {
+            id: this.id,
+            eventType: this.eventType,
+            status: this.status,
+            // config.writer为异步发送，如果不拷贝的话由于同时对content进行修改会导致event数据重复
+            content: JSON.parse(JSON.stringify(this.content)),
+            ...(this.parentId && { parentId: this.parentId }),
+        };
+    }
 
     /** 设置事件状态 */
     setStatus(status: BaseEvent.EventStatus): this {
@@ -84,11 +96,20 @@ export namespace BaseEvent {
         return `/${role}/${subType}` as EventType;
     }
 
+    /**
+     * 内容聚合规则
+     * - concat: 拼接内容（用于流式传输）
+     * - replace: 替换内容（默认行为）
+     */
+    export type AggregateRule = 'concat' | 'replace';
+
     /** 事件内容 */
     export interface IContent {
         /** 传输内容的类型 */
         contentType: 'text';
         /** 传输内容 */
         data: unknown;
+        /** 内容聚合规则（可选，默认为 replace） */
+        aggregateRule?: AggregateRule;
     }
 }

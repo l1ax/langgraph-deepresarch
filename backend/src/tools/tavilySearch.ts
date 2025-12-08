@@ -8,7 +8,7 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { tavily } from '@tavily/core';
-import deepSeek from '../llm';
+import { ChatDeepSeek } from '@langchain/deepseek';
 import { summarizeWebpagePrompt } from '../prompts';
 import { getTodayStr } from '../utils';
 import dotenv from 'dotenv';
@@ -16,6 +16,16 @@ dotenv.config();
 
 // 初始化 Tavily 客户端
 const tavilyClient = tavily({ apiKey: process.env.TAVILY_API_KEY });
+
+// 初始化 DeepSeek Chat
+const deepSeekChat = new ChatDeepSeek({
+    model: 'deepseek-chat',
+    temperature: 0,
+    configuration: {
+        baseURL: process.env.DEEPSEEK_BASE_URL,
+        apiKey: process.env.DEEPSEEK_API_KEY
+    },
+});
 
 /**
  * 网页摘要输出的schema。
@@ -49,18 +59,25 @@ async function summarizeWebpageContent(webpageContent: string): Promise<string> 
             .replace('{webpage_content}', webpageContent)
             .replace('{date}', getTodayStr());
 
-        // 生成结构化输出的摘要
-        const response = await deepSeek.invoke({
-            messages: [
-                {
-                    role: 'user',
-                    content: promptContent,
-                },
-            ],
+        // 使用stream方式生成结构化输出的摘要
+        let fullResponse = '';
+        const stream = await deepSeekChat.stream([
+            {
+                role: 'user',
+                content: promptContent,
+            },
+        ], {
             response_format: { type: 'json_object' },
         });
 
-        const summary: Summary = JSON.parse(response as string);
+        for await (const chunk of stream) {
+            const content = chunk.content;
+            if (content && typeof content === 'string' && content.length > 0) {
+                fullResponse += content;
+            }
+        }
+
+        const summary: Summary = JSON.parse(fullResponse);
 
         // 使用清晰的结构格式化摘要
         const formattedSummary = `<summary>\n${summary.summary}\n</summary>\n\n<key_excerpts>\n${summary.key_excerpts}\n</key_excerpts>`;

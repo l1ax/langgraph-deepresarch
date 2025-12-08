@@ -40,8 +40,7 @@ export namespace ToolCallEvent {
     tool_result: unknown;
   }
 
-  export interface IContent {
-    contentType: 'text';
+  export interface IContent extends BaseEvent.IContent {
     data: IData;
   }
 }

@@ -45,17 +45,37 @@ export const writeResearchBrief = traceable(async (
   }
 
   try {
-    const response = await zhipuChat.invoke(
+    // 使用stream方式调用LLM
+    let fullResponse = '';
+    const stream = await zhipuChat.stream(
       [new HumanMessage({ content: promptContent })],
       { response_format: { type: 'json_object' } }
     );
 
-    const content = response.content ?? '{}';
-    const researchQuestion: ResearchQuestion = JSON.parse(
-      typeof content === 'string' ? content : JSON.stringify(content)
-    );
+    for await (const chunk of stream) {
+      const content = chunk.content;
+      if (content) {
+        const chunkStr = typeof content === 'string' ? content : JSON.stringify(content);
+        // 过滤空字符串
+        if (chunkStr.length > 0) {
+          fullResponse += chunkStr;
 
-    briefEvent.content.data.research_brief = researchQuestion.research_brief;
+          // 发送流式更新（带aggregateRule: 'concat'）
+          if (config.writer) {
+            briefEvent.content.data = chunkStr;
+            briefEvent.content.aggregateRule = 'concat';
+            config.writer(briefEvent.setStatus('running').toJSON());
+          }
+        }
+      }
+    }
+
+    // 解析完整的JSON
+    const researchQuestion: ResearchQuestion = JSON.parse(fullResponse);
+
+    // 发送最终结果（使用完整的data）
+    briefEvent.content.data = researchQuestion;
+    briefEvent.content.aggregateRule = undefined;
     // 发送 finished 状态
     if (config.writer) {
       config.writer(briefEvent.setStatus('finished').toJSON());

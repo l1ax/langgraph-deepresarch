@@ -18,8 +18,7 @@ export namespace GroupEvent {
     // GroupEvent 没有额外的数据
   }
 
-  export interface IContent {
-    contentType: 'text';
+  export interface IContent extends BaseEvent.IContent {
     data: IData | null;
   }
 }

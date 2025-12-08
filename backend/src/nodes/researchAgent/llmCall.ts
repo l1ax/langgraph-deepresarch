@@ -47,8 +47,6 @@ export const researchLlmCall = traceable(async (
 
     // 如果 LLM 返回了文本内容（不是工具调用），发送 ChatEvent
     const textContent = extractContent(response.content);
-    console.log('textContent', textContent);
-    console.log('content', response.content);
     if (textContent && config.writer) {
         const chatEvent = new ChatEvent('researcher');
         chatEvent.setMessage(textContent);

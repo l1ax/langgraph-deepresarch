@@ -80,7 +80,6 @@ export const EventView: React.FC<{
   const Renderer = EventRendererRegistry.get(event.subType);
 
   if (!Renderer) {
-    console.warn(`No renderer registered for event subType: ${event.subType}`);
     return null;
   }
 

@@ -67,7 +67,6 @@ export const clarifyWithUser = traceable(async (
       if (content && typeof content === 'string' && content.length > 0) {
         
         fullResponse += content;
-        fs.appendFileSync(path.join(__dirname, 'clarifyWithUser.json'), content);
 
         // 发送流式更新（带aggregateRule: 'concat'）
         if (config.writer) {

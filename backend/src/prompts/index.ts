@@ -23,6 +23,10 @@ If you need to ask a question, follow these guidelines:
 - Use bullet points or numbered lists if appropriate for clarity. Make sure that this uses markdown formatting and will be rendered correctly if the string output is passed to a markdown renderer.
 - Don't ask for unnecessary information, or information that the user has already provided. If you can see that the user has already provided the information, do not ask for it again.
 
+CRITICAL: Make sure the answer is written in the same language as the human messages!
+For example, if the user's messages are in English, then MAKE SURE you write your response in English. If the user's messages are in Chinese, then MAKE SURE you write your entire response in Chinese.
+This is critical. The user will only understand the answer if it is written in the same language as their input message.
+
 Respond in valid JSON format with these exact keys:
 "need_clarification": boolean,
 "question": "<question to ask the user to clarify the report scope>",
@@ -60,6 +64,10 @@ You will return a single research question that will be used to guide the resear
 <Core Principle>
 The research brief must be a FAITHFUL REPRESENTATION of the user's request. It should contain ONLY information that the user explicitly stated or directly implied. Do not add, infer, or assume any information beyond what the user provided.
 </Core Principle>
+
+CRITICAL: Make sure the answer is written in the same language as the human messages!
+For example, if the user's messages are in English, then MAKE SURE you write your response in English. If the user's messages are in Chinese, then MAKE SURE you write your entire response in Chinese.
+This is critical. The user will only understand the answer if it is written in the same language as their input message.
 
 Guidelines:
 
@@ -130,6 +138,10 @@ You have access to two main tools:
 
 **CRITICAL: Use think_tool after each search to reflect on results and plan next steps**
 </Available Tools>
+
+CRITICAL: Make sure the answer is written in the same language as the human messages!
+For example, if the user's messages are in English, then MAKE SURE you write your response in English. If the user's messages are in Chinese, then MAKE SURE you write your entire response in Chinese.
+This is critical. The user will only understand the answer if it is written in the same language as their input message.
 
 <Instructions>
 Think like a human researcher with limited time. Follow these steps:
@@ -359,8 +371,8 @@ Format the report in clear markdown with proper structure and include source ref
 - IMPORTANT: Number sources sequentially without gaps (1,2,3,4...) in the final list regardless of which sources you choose
 - Each source should be a separate line item in a list, so that in markdown it is rendered as a list.
 - Example format:
-  [1] Source Title: URL
-  [2] Source Title: URL
+  [1] Source Title: URL\n
+  [2] Source Title: URL\n
 - Citations are extremely important. Make sure to include these, and pay a lot of attention to getting these right. Users will often use these citations to look into more information.
 </Citation Rules>
 `;

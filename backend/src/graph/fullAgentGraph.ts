@@ -5,12 +5,13 @@
  * 整合用户澄清、研究简要生成、监督者研究和最终报告生成
  */
 
-import { END, START, StateGraph, MemorySaver } from '@langchain/langgraph';
+import { END, START, StateGraph } from '@langchain/langgraph';
 import { StateAnnotation } from '../state';
 import { clarifyWithUser } from '../nodes/scope/userClarification';
 import { writeResearchBrief } from '../nodes/scope/briefGeneration';
 import { supervisorGraph } from './supervisorGraph';
 import { finalReportGeneration } from '../nodes/fullAgent/finalReportGeneration';
+import { checkpointer } from '../utils/checkpointer';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -31,10 +32,6 @@ const fullAgentBuilder = new StateGraph(StateAnnotation)
     .addEdge('supervisor_subgraph', 'final_report_generation')
     .addEdge('final_report_generation', END);
 
-// 创建内存持久化检查点保存器
-const checkpointer = new MemorySaver();
-
-// 编译完整工作流，添加内存持久化支持
 export const fullAgentGraph = fullAgentBuilder.compile({ checkpointer });
 
 (fullAgentGraph as any).name = 'fullResearchAgent';

@@ -21,15 +21,25 @@ export class Conversation {
 
   @observable isLoading: boolean = false;
 
+  /** 会话标题 */
+  @observable title: string | null = null;
+
   /** 会话中的元素列表（用户消息和助手回答） */
   @observable elements: Conversation.Element[] = [];
 
-  constructor(threadId: string, client: Client | null) {
+  constructor(threadId: string, client: Client | null, title?: string | null) {
     this.threadId = threadId;
     this.client = client;
+    this.title = title ?? null;
     // 创建 executor 并传入自身引用
     this.executor = new Executor(this);
     makeObservable(this);
+  }
+
+  /** 设置会话标题 */
+  @action.bound
+  setTitle(title: string | null) {
+    this.title = title;
   }
 
   /** 添加用户消息元素 */

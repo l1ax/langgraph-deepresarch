@@ -2,6 +2,8 @@
  * @file 工具函数
  */
 
+export { checkpointer, initCheckpointer } from './checkpointer';
+
 /**
  * 获取当前日期
  */

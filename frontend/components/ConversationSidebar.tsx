@@ -2,21 +2,27 @@
 
 import React from 'react';
 import { observer } from 'mobx-react-lite';
-import { DeepResearchPageStore } from '@/stores/DeepResearchPageStore';
+import { DeepResearchPageStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Plus, MessageSquare, Sparkles } from 'lucide-react';
+import { Plus, MessageSquare, Sparkles, Trash2, Loader2 } from 'lucide-react';
 
 interface ConversationSidebarProps {
   store: DeepResearchPageStore;
 }
 
 export const ConversationSidebar = observer(({ store }: ConversationSidebarProps) => {
-  const { conversations, currentConversation, isSidebarOpen } = store;
+  const { conversations, currentConversation, isSidebarOpen, isInitializing } = store;
 
-  /** 获取会话的标题（取第一条用户消息的前30个字符） */
+  /** 获取会话的标题（取第一条用户消息的前30个字符，或使用数据库中的标题） */
   const getConversationTitle = (conversation: typeof conversations[0]) => {
+    // 优先使用数据库中保存的标题
+    if (conversation.title) {
+      const title = conversation.title.slice(0, 30);
+      return title.length < conversation.title.length ? `${title}...` : title;
+    }
+    // 否则从消息中提取
     const firstUserElement = conversation.elements.find(
       (el) => el.role === 'user'
     );
@@ -25,6 +31,18 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
       return title.length < firstUserElement.content.length ? `${title}...` : title;
     }
     return '新对话';
+  };
+
+  /** 处理删除会话 */
+  const handleDeleteConversation = (e: React.MouseEvent, threadId: string) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发切换会话
+    
+    // 如果正在删除，忽略点击
+    if (store.isConversationDeleting(threadId)) return;
+    
+    if (window.confirm('确定要删除这个对话吗？')) {
+      store.deleteConversation(threadId);
+    }
   };
 
   /** 获取会话的时间显示 */
@@ -63,62 +81,105 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
 
       {/* 会话列表 */}
       <ScrollArea className="flex-1 px-3 py-4">
-        <div className="space-y-2 w-56">
-          {conversations.map((conversation) => {
-            const isActive = currentConversation?.threadId === conversation.threadId;
-            const title = getConversationTitle(conversation);
-            const time = getConversationTime(conversation);
+        {/* 初始化加载状态 */}
+        {isInitializing ? (
+          <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+            <Loader2 className="h-6 w-6 animate-spin mb-2" />
+            <span className="text-sm">加载对话列表...</span>
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+            <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
+            <span className="text-sm">暂无对话</span>
+            <span className="text-xs mt-1">点击上方按钮开始新对话</span>
+          </div>
+        ) : (
+          <div className="space-y-2 w-56">
+            {conversations.map((conversation) => {
+              const isActive = currentConversation?.threadId === conversation.threadId;
+              const isDeleting = store.isConversationDeleting(conversation.threadId);
+              const title = getConversationTitle(conversation);
+              const time = getConversationTime(conversation);
 
-            return (
-              <div
-                key={conversation.threadId}
-                className={cn(
-                  'w-full rounded-2xl p-[2px] transition-all duration-200',
-                )}
-              >
-                <button
-                  onClick={() => store.switchToConversation(conversation.threadId)}
+              return (
+                <div
+                  key={conversation.threadId}
                   className={cn(
-                    'w-full text-left px-3 py-3 rounded-[1.35rem] transition-all duration-150 group',
-                    isActive ? 'bg-white' : 'bg-transparent hover:bg-white/70'
+                    'w-full rounded-2xl p-[2px] transition-all duration-200',
+                    isDeleting && 'opacity-50 pointer-events-none'
                   )}
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        'mt-0.5 p-1.5 rounded-md flex-shrink-0 border border-transparent transition-colors',
-                        isActive
-                          ? 'bg-[#4F6EC7]/15 border-[#4F6EC7]/30 text-[#3D5AB8]'
-                          : 'bg-[#DFE6F3] text-[#7A88AB] group-hover:bg-white group-hover:text-[#4F6EC7]'
-                      )}
+                  <div
+                    className={cn(
+                      'w-full text-left px-3 py-3 rounded-[1.35rem] transition-all duration-150 group relative',
+                      isActive ? 'bg-white' : 'bg-transparent hover:bg-white/70'
+                    )}
+                  >
+                    <button
+                      onClick={() => store.switchToConversation(conversation.threadId)}
+                      className="w-full text-left"
+                      disabled={isDeleting}
                     >
-                      <MessageSquare className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        'text-sm font-semibold leading-tight truncate max-w-[180px] block',
-                        isActive ? 'text-slate-900' : 'text-slate-700'
-                      )}>
-                        {title}
-                      </p>
-                      {time && (
-                        <p className="text-xs text-slate-500 mt-1">
-                          {time}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={cn(
+                            'mt-0.5 p-1.5 rounded-md shrink-0 border border-transparent transition-colors',
+                            isActive
+                              ? 'bg-[#4F6EC7]/15 border-[#4F6EC7]/30 text-[#3D5AB8]'
+                              : 'bg-[#DFE6F3] text-[#7A88AB] group-hover:bg-white group-hover:text-[#4F6EC7]'
+                          )}
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MessageSquare className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 pr-6">
+                          <p className={cn(
+                            'text-sm font-semibold leading-tight truncate max-w-[140px] block',
+                            isActive ? 'text-slate-900' : 'text-slate-700'
+                          )}>
+                            {title}
+                          </p>
+                          {time && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              {isDeleting ? '删除中...' : time}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                    {/* 删除按钮 */}
+                    <button
+                      onClick={(e) => handleDeleteConversation(e, conversation.threadId)}
+                      disabled={isDeleting}
+                      className={cn(
+                        'absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all duration-150',
+                        'opacity-0 group-hover:opacity-100',
+                        'text-slate-400 hover:text-red-500 hover:bg-red-50',
+                        isDeleting && 'opacity-100 cursor-not-allowed'
                       )}
-                    </div>
+                      title="删除对话"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </ScrollArea>
 
       {/* 底部装饰 */}
       <div className="p-4 border-t border-[#D4DBE8] bg-[#E3EAF5]">
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/70">
-          <div className="p-1.5 rounded-md bg-gradient-to-br from-[#4F6EC7] to-[#7A8FD6] text-white">
+          <div className="p-1.5 rounded-md bg-linear-to-br from-[#4F6EC7] to-[#7A8FD6] text-white">
             <Sparkles className="h-3.5 w-3.5" />
           </div>
           <span className="text-xs font-medium text-slate-600">DeepResearch AI</span>

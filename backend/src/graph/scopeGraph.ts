@@ -1,11 +1,11 @@
-import { END, MemorySaver, START, StateGraph } from '@langchain/langgraph';
+import { END, START, StateGraph } from '@langchain/langgraph';
 import { StateAnnotation } from '../state';
-import {clarifyWithUser, writeResearchBrief} from '../nodes';
+import { clarifyWithUser, writeResearchBrief } from '../nodes';
+import { checkpointer } from '../utils/checkpointer';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const graphBuilder = new StateGraph(StateAnnotation);
-const checkpointer = new MemorySaver();
 
 export const scopeAgentGraph = graphBuilder
     .addNode("clarify_with_user", clarifyWithUser, {

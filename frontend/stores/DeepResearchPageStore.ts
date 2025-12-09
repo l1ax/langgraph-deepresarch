@@ -1,11 +1,15 @@
-import { observable, action, flow, computed, makeObservable } from 'mobx';
-import { Client, Thread } from '@langchain/langgraph-sdk';
+import { observable, action, flow, computed, makeObservable, flowResult } from 'mobx';
+import { Client, Thread as LangGraphThread } from '@langchain/langgraph-sdk';
 import { Conversation } from './Conversation';
 import { ChatEvent } from './events';
 import { ExecutionResponse } from './ExecutionResponse';
+import { apiService, type User, type Thread } from '@/services/api';
 
 // Configuration
 const API_URL = 'http://localhost:2024';
+
+// 临时用户 email（后续可以接入真实的用户认证系统）
+const TEMP_USER_EMAIL = 'default@deepresearch.local';
 
 /**
  * DeepResearchPageStore
@@ -18,6 +22,9 @@ export class DeepResearchPageStore {
   /** LangGraph SDK 客户端实例 */
   @observable client: Client | null = null;
 
+  /** 当前用户 */
+  @observable currentUser: User | null = null;
+
   /** 会话列表 */
   @observable conversations: Conversation[] = [];
 
@@ -27,8 +34,58 @@ export class DeepResearchPageStore {
   /** 侧边栏是否展开 */
   @observable isSidebarOpen: boolean = true;
 
+  /** 是否正在初始化 */
+  @observable isInitializing: boolean = false;
+
+  // ===== UI Loading 状态 =====
+
+  /** 删除会话的 loading 状态，key 是 threadId */
+  @observable deletingConversationIds: Set<string> = new Set();
+
+  /** 创建会话的 loading 状态 */
+  @observable isCreatingConversation: boolean = false;
+
+  /** 发送消息的 loading 状态 */
+  @observable isSendingMessage: boolean = false;
+
+  /** Toast 消息队列 */
+  @observable toasts: DeepResearchPageStore.Toast[] = [];
+
   constructor() {
     makeObservable(this);
+  }
+
+  // ===== Toast 消息方法 =====
+
+  @action.bound
+  showToast(message: string, type: DeepResearchPageStore.ToastType = 'info', duration: number = 3000) {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const toast: DeepResearchPageStore.Toast = { id, message, type, duration };
+    this.toasts.push(toast);
+
+    // 自动移除
+    if (duration > 0) {
+      setTimeout(() => {
+        this.removeToast(id);
+      }, duration);
+    }
+
+    return id;
+  }
+
+  @action.bound
+  removeToast(id: string) {
+    const index = this.toasts.findIndex(t => t.id === id);
+    if (index !== -1) {
+      this.toasts.splice(index, 1);
+    }
+  }
+
+  // ===== Loading 状态检查方法 =====
+
+  /** 检查指定会话是否正在删除 */
+  isConversationDeleting(threadId: string): boolean {
+    return this.deletingConversationIds.has(threadId);
   }
 
   /** 设置输入框的值 */
@@ -51,13 +108,9 @@ export class DeepResearchPageStore {
 
   /** 创建新会话 */
   @action.bound
-  private createConversation(threadId: string): Conversation {
-    const conversation = new Conversation(threadId, this.client);
-
+  private createConversation(threadId: string, title?: string | null): Conversation {
+    const conversation = new Conversation(threadId, this.client, title);
     this.conversations.push(conversation);
-
-    this.saveConversationThreadIds();
-
     return conversation;
   }
 
@@ -70,19 +123,6 @@ export class DeepResearchPageStore {
     }
   }
 
-  /** 保存所有会话的 threadIds 到 localStorage */
-  @action.bound
-  private saveConversationThreadIds() {
-    const threadIds = this.conversations.map(c => c.threadId);
-    localStorage.setItem('conversationThreadIds', JSON.stringify(threadIds));
-  }
-
-  /** 从 localStorage 加载所有会话的 threadIds */
-  private loadConversationThreadIds(): string[] {
-    const saved = localStorage.getItem('conversationThreadIds');
-    return saved ? JSON.parse(saved) : [];
-  }
-
   /** 创建新对话入口：重置当前会话，回到欢迎页 */
   @action.bound
   createNewConversation() {
@@ -90,26 +130,65 @@ export class DeepResearchPageStore {
     this.clearInput();
   }
 
+  /** 删除指定会话 */
+  @flow.bound
+  *deleteConversation(threadId: string): Generator<Promise<any>, void, any> {
+    // 设置删除中状态
+    this.deletingConversationIds.add(threadId);
+    
+    try {
+      // 从数据库删除
+      yield flowResult(apiService.deleteThread(threadId));
+
+      // 从本地列表移除
+      const index = this.conversations.findIndex(c => c.threadId === threadId);
+      if (index !== -1) {
+        this.conversations.splice(index, 1);
+      }
+
+      // 如果删除的是当前会话，重置当前会话
+      if (this.currentConversation?.threadId === threadId) {
+        this.currentConversation = null;
+      }
+
+      this.showToast('对话已删除', 'success');
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      this.showToast('删除对话失败，请重试', 'error');
+    } finally {
+      this.deletingConversationIds.delete(threadId);
+    }
+  }
+
   /** 初始化客户端和会话线程 */
   @flow.bound
   *initClient(): Generator<Promise<any>, void, any> {
+    if (this.isInitializing) return;
+
     try {
+      this.isInitializing = true;
+
       // 初始化 client
       this.client = new Client({ apiUrl: API_URL });
 
-      // 加载所有保存的会话 threadIds
-      const savedThreadIds = this.loadConversationThreadIds();
+      // 获取或创建当前用户
+      this.currentUser = yield flowResult(apiService.getOrCreateUser(TEMP_USER_EMAIL, 'Default User'));
 
-      if (savedThreadIds.length > 0) {
+      if (this.currentUser) {
+        // 从数据库加载用户的所有 threads
+        const threads: Thread[] = yield flowResult(apiService.getThreadsByUser(this.currentUser.id));
+
         // 恢复所有会话
-        for (const threadId of savedThreadIds) {
-          const conversation = this.createConversation(threadId);
-          conversation.restoreDataByThreadId(threadId);
+        for (const thread of threads) {
+          const conversation = this.createConversation(thread.id, thread.title);
+          conversation.restoreDataByThreadId(thread.id);
         }
       }
-
     } catch (error) {
       console.error('Failed to initialize client:', error);
+      this.showToast('初始化失败，请刷新页面重试', 'error');
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -138,14 +217,25 @@ export class DeepResearchPageStore {
 
     if (!conversation) {
       try {
-        const thread: Thread = yield this.client.threads.create();
+        this.isCreatingConversation = true;
+        
+        // 创建 LangGraph thread
+        const thread: LangGraphThread = yield this.client.threads.create();
         const threadId = thread.thread_id;
+
+        if (this.currentUser) {
+          yield flowResult(apiService.createThread(this.currentUser.id, undefined, threadId));
+        }
+
         conversation = this.createConversation(threadId);
         this.currentConversation = conversation;
       } catch (error) {
         console.error('Failed to create conversation thread:', error);
         this.addErrorMessage('无法创建新的对话，请稍后重试或确认服务配置。');
+        this.showToast('创建对话失败', 'error');
         return;
+      } finally {
+        this.isCreatingConversation = false;
       }
     }
 
@@ -162,8 +252,17 @@ export class DeepResearchPageStore {
     conversation.addExecutionResponse(executionResponse);
 
     try {
+      this.isSendingMessage = true;
+      
       // 调用 conversation 的 executor，传入 executionResponse，让它在流式接收过程中更新
       yield conversation.executor.invoke(userMessageContent, executionResponse);
+
+      // 成功完成后，更新 thread 标题（使用第一条用户消息作为标题）
+      if (this.currentUser && !conversation.title) {
+        const title = userMessageContent.slice(0, 100);
+        yield flowResult(apiService.updateThread(conversation.threadId, { title }));
+        conversation.setTitle(title);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // 如果出错，移除刚才添加的 executionResponse，改用错误消息
@@ -175,6 +274,9 @@ export class DeepResearchPageStore {
       this.addErrorMessage(
         '抱歉，处理您的请求时出现错误。请确保后端服务已启动 (http://localhost:2024)。'
       );
+      this.showToast('发送消息失败', 'error');
+    } finally {
+      this.isSendingMessage = false;
     }
   }
 
@@ -194,6 +296,12 @@ export class DeepResearchPageStore {
   @computed
   get elements(): Conversation.Element[] {
     return this.currentConversation?.allElements ?? [];
+  }
+
+  /** 是否有任何会话正在删除 */
+  @computed
+  get isAnyConversationDeleting(): boolean {
+    return this.deletingConversationIds.size > 0;
   }
 }
 
@@ -252,5 +360,16 @@ export namespace DeepResearchPageStore {
       'messages' in chunk.data &&
       Array.isArray((chunk.data as GraphState).messages)
     );
+  }
+
+  /** Toast 类型 */
+  export type ToastType = 'info' | 'success' | 'warning' | 'error';
+
+  /** Toast 消息 */
+  export interface Toast {
+    id: string;
+    message: string;
+    type: ToastType;
+    duration: number;
   }
 }

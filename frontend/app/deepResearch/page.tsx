@@ -17,6 +17,7 @@ import { GroupEventRenderer } from '@/components/GroupEventRenderer';
 import { TreeViewUI } from '@/components/TreeViewUI';
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { ConversationComposer } from '@/components/ConversationComposer';
+import { ToastContainer } from '@/components/Toast';
 
 // 按 subType 注册渲染器
 EventRendererRegistry.register<ClarifyEvent.IData>('clarify', ClarifyEventRenderer);
@@ -112,6 +113,9 @@ const DeepResearchPage = observer(() => {
 
   return (
     <div className="flex h-screen w-full min-h-0 bg-background text-foreground font-sans selection:bg-primary/20">
+      {/* Toast 通知 */}
+      <ToastContainer store={store} />
+      
       {/* Sidebar */}
       <ConversationSidebar store={store} />
 
@@ -199,10 +203,16 @@ const DeepResearchPage = observer(() => {
                   value={store.inputValue}
                   onChange={(value) => store.setInputValue(value)}
                   onSubmit={handleSubmit}
-                  isLoading={store.isLoading}
-                  canSubmit={store.canSubmit}
+                  isLoading={store.isLoading || store.isCreatingConversation}
+                  canSubmit={store.canSubmit && !store.isCreatingConversation}
                   inputRef={composerInputRef}
                 />
+                {store.isCreatingConversation && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#4F6EC7]" />
+                    <span>正在创建对话...</span>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-3 justify-center">
                   {[
                     '2024 年 AI 投融资趋势',
@@ -215,6 +225,7 @@ const DeepResearchPage = observer(() => {
                       variant="ghost"
                       className="rounded-2xl bg-white px-4 py-2 text-sm text-slate-600 shadow-sm hover:bg-slate-50"
                       onClick={() => handleSuggestedPrompt(prompt)}
+                      disabled={store.isCreatingConversation}
                     >
                       {prompt}
                     </Button>

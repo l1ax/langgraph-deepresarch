@@ -9,6 +9,7 @@ import { END, START, StateGraph } from '@langchain/langgraph';
 import { StateAnnotation } from '../state';
 import { supervisor, supervisorTools } from '../nodes';
 import { isAIMessage } from '@langchain/core/messages';
+import { checkpointer } from '../utils/checkpointer';
 
 // ===== 路由函数 =====
 
@@ -65,6 +66,6 @@ export const supervisorGraphBuilder = new StateGraph(StateAnnotation)
     .addConditionalEdges('supervisor_tools', routeAfterTools);
 
 // 编译工作流图
-export const supervisorGraph = supervisorGraphBuilder.compile();
+export const supervisorGraph = supervisorGraphBuilder.compile({ checkpointer });
 
 (supervisorGraph as any).name = 'supervisorAgent';

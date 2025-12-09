@@ -12,9 +12,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       include: {
         user: {
           select: {
-            id: true,
-            name: true,
-            email: true,
+            id: true
           },
         },
       },

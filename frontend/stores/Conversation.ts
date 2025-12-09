@@ -27,6 +27,18 @@ export class Conversation {
   /** 会话中的元素列表（用户消息和助手回答） */
   @observable elements: Conversation.Element[] = [];
 
+  @observable
+  createdAt: string = new Date().toISOString();
+
+  getTitle = action(() => {
+    if (this.title) {
+      const title = this.title.slice(0, 30);
+      return title.length < this.title.length ? `${title}...` : title;
+    }
+
+    return '新对话';
+  });
+
   constructor(threadId: string, client: Client | null, title?: string | null) {
     this.threadId = threadId;
     this.client = client;
@@ -62,7 +74,7 @@ export class Conversation {
     const executionResponse = new ExecutionResponse();
     executionResponse.upsertEvent(event);
     executionResponse.markCompleted();
-    
+
     return this.addExecutionResponse(executionResponse);
   }
 
@@ -132,6 +144,11 @@ export class Conversation {
       this.isLoading = true;
   
       const state: ThreadState<{events: Array<BaseEvent.IEventData>}> = yield this.client.threads.getState(threadId);
+
+      if (state.created_at) {
+        this.createdAt = state.created_at;
+      }
+
       const events = state.values.events;
   
       if (events.length > 0) {

@@ -3,34 +3,39 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
 import { DeepResearchPageStore } from '@/stores';
+import { userStore } from '@/stores/User';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Plus, MessageSquare, Sparkles, Trash2, Loader2 } from 'lucide-react';
+import { Plus, MessageSquare, Sparkles, Trash2, Loader2, LogOut, User, Github } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import dayjs from '@/lib/dayjs';
+import {flowResult} from 'mobx';
 
 interface ConversationSidebarProps {
   store: DeepResearchPageStore;
 }
 
 export const ConversationSidebar = observer(({ store }: ConversationSidebarProps) => {
-  const { conversations, currentConversation, isSidebarOpen, isInitializing } = store;
+  const { conversations, currentConversation, isSidebarOpen, isLoadingConversations } = store;
 
-  /** 获取会话的标题（取第一条用户消息的前30个字符，或使用数据库中的标题） */
-  const getConversationTitle = (conversation: typeof conversations[0]) => {
-    // 优先使用数据库中保存的标题
-    if (conversation.title) {
-      const title = conversation.title.slice(0, 30);
-      return title.length < conversation.title.length ? `${title}...` : title;
+  /** 处理登录 */
+  const handleSignIn = async () => {
+    try {
+      await flowResult(userStore.signInWithGitHub());
+    } catch (error) {
+      store.showToast('GitHub 登录失败，请重试', 'error');
     }
-    // 否则从消息中提取
-    const firstUserElement = conversation.elements.find(
-      (el) => el.role === 'user'
-    );
-    if (firstUserElement && 'content' in firstUserElement) {
-      const title = firstUserElement.content.slice(0, 30);
-      return title.length < firstUserElement.content.length ? `${title}...` : title;
+  };
+
+  /** 处理登出 */
+  const handleSignOut = async () => {
+    try {
+      await flowResult(userStore.signOut());
+      store.showToast('已成功登出', 'success');
+    } catch (error) {
+      store.showToast('登出失败，请重试', 'error');
     }
-    return '新对话';
   };
 
   /** 处理删除会话 */
@@ -43,25 +48,6 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
     if (window.confirm('确定要删除这个对话吗？')) {
       store.deleteConversation(threadId);
     }
-  };
-
-  /** 获取会话的时间显示 */
-  const getConversationTime = (conversation: typeof conversations[0]) => {
-    if (conversation.elements.length > 0) {
-      const time = conversation.elements[0].timestamp;
-      const now = new Date();
-      const diff = now.getTime() - time.getTime();
-      const minutes = Math.floor(diff / 60000);
-      const hours = Math.floor(diff / 3600000);
-      const days = Math.floor(diff / 86400000);
-
-      if (minutes < 1) return '刚刚';
-      if (minutes < 60) return `${minutes} 分钟前`;
-      if (hours < 24) return `${hours} 小时前`;
-      if (days < 7) return `${days} 天前`;
-      return time.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-    }
-    return '';
   };
 
   if (!isSidebarOpen) return null;
@@ -81,8 +67,8 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
 
       {/* 会话列表 */}
       <ScrollArea className="flex-1 px-3 py-4">
-        {/* 初始化加载状态 */}
-        {isInitializing ? (
+        {/* 加载状态 */}
+        {isLoadingConversations ? (
           <div className="flex flex-col items-center justify-center py-8 text-slate-500">
             <Loader2 className="h-6 w-6 animate-spin mb-2" />
             <span className="text-sm">加载对话列表...</span>
@@ -98,8 +84,7 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
             {conversations.map((conversation) => {
               const isActive = currentConversation?.threadId === conversation.threadId;
               const isDeleting = store.isConversationDeleting(conversation.threadId);
-              const title = getConversationTitle(conversation);
-              const time = getConversationTime(conversation);
+              const title = conversation.getTitle();
 
               return (
                 <div
@@ -142,9 +127,9 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
                           )}>
                             {title}
                           </p>
-                          {time && (
+                          {conversation.createdAt && (
                             <p className="text-xs text-slate-500 mt-1">
-                              {isDeleting ? '删除中...' : time}
+                              {isDeleting ? '删除中...' : dayjs(conversation.createdAt).fromNow()}
                             </p>
                           )}
                         </div>
@@ -176,14 +161,45 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
         )}
       </ScrollArea>
 
-      {/* 底部装饰 */}
+      {/* 底部：用户信息 */}
       <div className="p-4 border-t border-[#D4DBE8] bg-[#E3EAF5]">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/70">
-          <div className="p-1.5 rounded-md bg-linear-to-br from-[#4F6EC7] to-[#7A8FD6] text-white">
-            <Sparkles className="h-3.5 w-3.5" />
+        {userStore.currentUser ? (
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl bg-white/70">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Avatar className="h-8 w-8 shrink-0">
+                {userStore.currentUser.avatarUrl && (
+                  <AvatarImage src={userStore.currentUser.avatarUrl} alt={userStore.currentUser.name || ''} />
+                )}
+                <AvatarFallback className="bg-[#4F6EC7]/15 text-[#4F6EC7]">
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {userStore.currentUser.name || userStore.currentUser.email}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              className="h-8 w-8 shrink-0 text-slate-500 hover:text-red-500 hover:bg-red-50"
+              title="登出"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
-          <span className="text-xs font-medium text-slate-600">DeepResearch AI</span>
-        </div>
+        ) : (
+          <Button
+            onClick={handleSignIn}
+            disabled={userStore.isAuthLoading}
+            className="w-full gap-2 bg-[#24292e] hover:bg-[#1a1e22] text-white"
+          >
+            <Github className="h-4 w-4" />
+            使用 GitHub 登录
+          </Button>
+        )}
       </div>
     </div>
   );

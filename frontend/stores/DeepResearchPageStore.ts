@@ -1,15 +1,13 @@
-import { observable, action, flow, computed, makeObservable, flowResult } from 'mobx';
+import { observable, action, flow, computed, makeObservable, flowResult, runInAction } from 'mobx';
 import { Client, Thread as LangGraphThread } from '@langchain/langgraph-sdk';
 import { Conversation } from './Conversation';
 import { ChatEvent } from './events';
 import { ExecutionResponse } from './ExecutionResponse';
-import { apiService, type User, type Thread } from '@/services/api';
+import { apiService, type Thread } from '@/services/api';
+import { userStore } from './User';
 
 // Configuration
 const API_URL = 'http://localhost:2024';
-
-// 临时用户 email（后续可以接入真实的用户认证系统）
-const TEMP_USER_EMAIL = 'default@deepresearch.local';
 
 /**
  * DeepResearchPageStore
@@ -21,9 +19,6 @@ export class DeepResearchPageStore {
 
   /** LangGraph SDK 客户端实例 */
   @observable client: Client | null = null;
-
-  /** 当前用户 */
-  @observable currentUser: User | null = null;
 
   /** 会话列表 */
   @observable conversations: Conversation[] = [];
@@ -48,11 +43,17 @@ export class DeepResearchPageStore {
   /** 发送消息的 loading 状态 */
   @observable isSendingMessage: boolean = false;
 
+  /** 加载会话列表的 loading 状态 */
+  @observable isLoadingConversations: boolean = false;
+
   /** Toast 消息队列 */
   @observable toasts: DeepResearchPageStore.Toast[] = [];
 
   constructor() {
     makeObservable(this);
+
+    // 监听用户状态变化
+    userStore.events.on('userChange', this.onUserChange);
   }
 
   // ===== Toast 消息方法 =====
@@ -81,6 +82,48 @@ export class DeepResearchPageStore {
     }
   }
 
+  // ===== 用户会话管理 =====
+
+  /** 加载用户的会话列表 */
+  @flow.bound
+  *loadUserConversations(): Generator<Promise<any>, void, any> {
+    if (!userStore.currentUser) return;
+
+    try {
+      this.isLoadingConversations = true;
+      const threads: Thread[] = yield flowResult(apiService.getThreadsByUser(userStore.currentUser.id));
+
+      // 清空现有会话
+      this.conversations = [];
+
+      const asyncTasks = threads.map(async (thread) => {
+        const conversation = new Conversation(thread.id, this.client, thread.title);
+        this.conversations.push(conversation);
+        await conversation.restoreDataByThreadId(thread.id);
+      });
+
+      yield Promise.all(asyncTasks);
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+      this.showToast('加载会话列表失败', 'error');
+    } finally {
+      this.isLoadingConversations = false;
+    }
+  }
+
+  /** 用户状态变化处理 */
+  @action.bound
+  private onUserChange(user: typeof userStore.currentUser) {
+    if (user) {
+      // 用户登录，加载会话
+      this.loadUserConversations();
+    } else {
+      // 用户登出，清空会话
+      this.conversations = [];
+      this.currentConversation = null;
+    }
+  }
+
   // ===== Loading 状态检查方法 =====
 
   /** 检查指定会话是否正在删除 */
@@ -104,14 +147,6 @@ export class DeepResearchPageStore {
   @action.bound
   toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
-  }
-
-  /** 创建新会话 */
-  @action.bound
-  private createConversation(threadId: string, title?: string | null): Conversation {
-    const conversation = new Conversation(threadId, this.client, title);
-    this.conversations.push(conversation);
-    return conversation;
   }
 
   /** 切换到指定的会话 */
@@ -160,7 +195,7 @@ export class DeepResearchPageStore {
     }
   }
 
-  /** 初始化客户端和会话线程 */
+  /** 初始化客户端和认证状态 */
   @flow.bound
   *initClient(): Generator<Promise<any>, void, any> {
     if (this.isInitializing) return;
@@ -168,28 +203,24 @@ export class DeepResearchPageStore {
     try {
       this.isInitializing = true;
 
-      // 初始化 client
+      // 初始化 LangGraph client
       this.client = new Client({ apiUrl: API_URL });
 
-      // 获取或创建当前用户
-      this.currentUser = yield flowResult(apiService.getOrCreateUser(TEMP_USER_EMAIL, 'Default User'));
+      // 初始化用户认证状态（会触发 userChange 事件）
+      yield flowResult(userStore.initialize());
 
-      if (this.currentUser) {
-        // 从数据库加载用户的所有 threads
-        const threads: Thread[] = yield flowResult(apiService.getThreadsByUser(this.currentUser.id));
-
-        // 恢复所有会话
-        for (const thread of threads) {
-          const conversation = this.createConversation(thread.id, thread.title);
-          conversation.restoreDataByThreadId(thread.id);
-        }
-      }
     } catch (error) {
       console.error('Failed to initialize client:', error);
       this.showToast('初始化失败，请刷新页面重试', 'error');
     } finally {
       this.isInitializing = false;
     }
+  }
+
+  /** 清理资源 */
+  @action.bound
+  dispose() {
+    userStore.events.off('userChange', this.onUserChange);
   }
 
   /** 添加错误消息到当前会话 */
@@ -213,21 +244,29 @@ export class DeepResearchPageStore {
   *handleSubmit() {
     if (!this.inputValue.trim() || !this.client) return;
 
+    // 检查是否已登录
+    if (!userStore.currentUser) {
+      this.showToast('请先登录后再发送消息', 'warning');
+      return;
+    }
+
     let conversation = this.currentConversation;
 
     if (!conversation) {
       try {
         this.isCreatingConversation = true;
-        
+
         // 创建 LangGraph thread
         const thread: LangGraphThread = yield this.client.threads.create();
         const threadId = thread.thread_id;
 
-        if (this.currentUser) {
-          yield flowResult(apiService.createThread(this.currentUser.id, undefined, threadId));
-        }
+        // 在数据库中创建 thread 记录
+        yield flowResult(apiService.createThread(userStore.currentUser.id, undefined, threadId));
 
-        conversation = this.createConversation(threadId);
+        conversation = new Conversation(threadId, this.client);
+        // 创建时间倒序排序
+        this.conversations.unshift(conversation);
+
         this.currentConversation = conversation;
       } catch (error) {
         console.error('Failed to create conversation thread:', error);
@@ -258,7 +297,7 @@ export class DeepResearchPageStore {
       yield conversation.executor.invoke(userMessageContent, executionResponse);
 
       // 成功完成后，更新 thread 标题（使用第一条用户消息作为标题）
-      if (this.currentUser && !conversation.title) {
+      if (!conversation.title) {
         const title = userMessageContent.slice(0, 100);
         yield flowResult(apiService.updateThread(conversation.threadId, { title }));
         conversation.setTitle(title);
@@ -286,10 +325,10 @@ export class DeepResearchPageStore {
     return this.currentConversation?.executor.isExecuting ?? false;
   }
 
-  /** 是否可以提交（非加载中且输入不为空） */
+  /** 是否可以提交（非加载中且输入不为空且已登录） */
   @computed
   get canSubmit(): boolean {
-    return !this.isLoading && !!this.inputValue.trim();
+    return !this.isLoading && !!this.inputValue.trim() && !!userStore.currentUser;
   }
 
   /** 获取当前会话的所有元素（用于 UI 渲染） */

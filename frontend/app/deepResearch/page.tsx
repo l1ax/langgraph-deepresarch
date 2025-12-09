@@ -2,12 +2,13 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
-import { User, Bot, Sparkles, Menu } from 'lucide-react';
+import { User, Bot, Sparkles, Menu, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { DeepResearchPageStore, Conversation, ClarifyEvent, BriefEvent, ChatEvent, ToolCallEvent, GroupEvent } from '@/stores';
+import { userStore } from '@/stores/User';
 import { EventRendererRegistry } from '@/services';
 import { ClarifyEventRenderer } from '@/components/ClarifyEventRenderer';
 import { BriefEventRenderer } from '@/components/BriefEventRenderer';
@@ -18,6 +19,8 @@ import { TreeViewUI } from '@/components/TreeViewUI';
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { ConversationComposer } from '@/components/ConversationComposer';
 import { ToastContainer } from '@/components/Toast';
+import { AuthButton } from '@/components/AuthButton';
+import {flowResult} from 'mobx';
 
 // 按 subType 注册渲染器
 EventRendererRegistry.register<ClarifyEvent.IData>('clarify', ClarifyEventRenderer);
@@ -33,6 +36,7 @@ const UserElementRenderer = observer<{ element: Conversation.UserElement }>(({ e
       <div className="whitespace-pre-wrap break-words">{element.content}</div>
     </div>
     <Avatar className="h-8 w-8 border shrink-0">
+      {userStore.currentUser?.avatarUrl && <AvatarImage src={userStore.currentUser.avatarUrl} />}
       <AvatarFallback className="bg-muted">
         <User className="h-4 w-4" />
       </AvatarFallback>
@@ -79,15 +83,56 @@ const LoadingIndicator = observer(() => (
   </div>
 ));
 
+/** 登录提示组件 */
+const LoginPrompt = observer<{ store: DeepResearchPageStore }>(({ store }) => {
+  const handleSignIn = async () => {
+    try {
+      await flowResult(userStore.signInWithGitHub());
+    } catch (error) {
+      store.showToast('GitHub 登录失败，请重试', 'error');
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center space-y-6 py-12">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#E9EEF6]">
+        <Sparkles className="h-10 w-10 text-[#4F6EC7]" />
+      </div>
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-semibold text-slate-900">欢迎使用 DeepResearch</h2>
+        <p className="text-slate-600 max-w-md">
+          使用 GitHub 账号登录后，即可开始深度研究之旅。
+          <br />
+          您的对话历史将被安全保存。
+        </p>
+      </div>
+      <Button
+        onClick={handleSignIn}
+        disabled={userStore.isAuthLoading}
+        size="lg"
+        className="gap-2 bg-[#24292e] hover:bg-[#1a1e22] text-white"
+      >
+        <Github className="h-5 w-5" />
+        使用 GitHub 登录
+      </Button>
+    </div>
+  );
+});
+
 const DeepResearchPage = observer(() => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const store = useMemo(() => new DeepResearchPageStore(), []);
 
-  // Initialize client and thread
+  // Initialize client and auth
   useEffect(() => {
     store.initClient();
+    
+    // Cleanup on unmount
+    return () => {
+      store.dispose();
+    };
   }, [store]);
 
   // Auto-scroll to bottom when elements change
@@ -106,10 +151,10 @@ const DeepResearchPage = observer(() => {
   };
 
   // 判断是否显示 loading：正在加载且最后一个元素是用户消息
-  // 不使用 useMemo，直接计算以确保 mobx 响应式正常工作
   const lastElement = store.elements[store.elements.length - 1];
   const showLoading = store.isLoading && lastElement && Conversation.isUserElement(lastElement);
   const hasConversation = Boolean(store.currentConversation);
+  const isAuthenticated = userStore.isAuthenticated;
 
   return (
     <div className="flex h-screen w-full min-h-0 bg-background text-foreground font-sans selection:bg-primary/20">
@@ -140,8 +185,11 @@ const DeepResearchPage = observer(() => {
               <h1 className="text-lg font-semibold tracking-tight">DeepResearch</h1>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground hidden md:block">
-            Powered by LangGraph
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-muted-foreground hidden md:block">
+              Powered by LangGraph
+            </span>
+            <AuthButton store={store} />
           </div>
         </header>
 
@@ -198,39 +246,47 @@ const DeepResearchPage = observer(() => {
           ) : (
             <div className="flex h-full w-full items-center justify-center px-4 py-10">
               <div className="w-full max-w-4xl space-y-6">
-                <ConversationComposer
-                  variant="landing"
-                  value={store.inputValue}
-                  onChange={(value) => store.setInputValue(value)}
-                  onSubmit={handleSubmit}
-                  isLoading={store.isLoading || store.isCreatingConversation}
-                  canSubmit={store.canSubmit && !store.isCreatingConversation}
-                  inputRef={composerInputRef}
-                />
-                {store.isCreatingConversation && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#4F6EC7]" />
-                    <span>正在创建对话...</span>
-                  </div>
+                {!isAuthenticated ? (
+                  // 未登录状态：显示登录提示
+                  <LoginPrompt store={store} />
+                ) : (
+                  // 已登录状态：显示输入框和推荐提示
+                  <>
+                    <ConversationComposer
+                      variant="landing"
+                      value={store.inputValue}
+                      onChange={(value) => store.setInputValue(value)}
+                      onSubmit={handleSubmit}
+                      isLoading={store.isLoading || store.isCreatingConversation}
+                      canSubmit={store.canSubmit && !store.isCreatingConversation}
+                      inputRef={composerInputRef}
+                    />
+                    {store.isCreatingConversation && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#4F6EC7]" />
+                        <span>正在创建对话...</span>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      {[
+                        '2024 年 AI 投融资趋势',
+                        '为初创公司设计研究流程',
+                        'Tavily 搜索在研究代理中的作用',
+                        'Supervisor Agent 的协作模式'
+                      ].map((prompt) => (
+                        <Button
+                          key={prompt}
+                          variant="ghost"
+                          className="rounded-2xl bg-white px-4 py-2 text-sm text-slate-600 shadow-sm hover:bg-slate-50"
+                          onClick={() => handleSuggestedPrompt(prompt)}
+                          disabled={store.isCreatingConversation}
+                        >
+                          {prompt}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
                 )}
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {[
-                    '2024 年 AI 投融资趋势',
-                    '为初创公司设计研究流程',
-                    'Tavily 搜索在研究代理中的作用',
-                    'Supervisor Agent 的协作模式'
-                  ].map((prompt) => (
-                    <Button
-                      key={prompt}
-                      variant="ghost"
-                      className="rounded-2xl bg-white px-4 py-2 text-sm text-slate-600 shadow-sm hover:bg-slate-50"
-                      onClick={() => handleSuggestedPrompt(prompt)}
-                      disabled={store.isCreatingConversation}
-                    >
-                      {prompt}
-                    </Button>
-                  ))}
-                </div>
               </div>
             </div>
           )}

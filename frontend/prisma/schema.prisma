@@ -7,10 +7,8 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  avatarUrl String?
+  // 使用 Supabase Auth 的 user.id 作为主键
+  id        String   @id
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   threads   Thread[]

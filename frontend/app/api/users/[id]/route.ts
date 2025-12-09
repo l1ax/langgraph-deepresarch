@@ -27,28 +27,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/users/[id] - 更新用户
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const { name, avatarUrl } = body;
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(avatarUrl !== undefined && { avatarUrl }),
-      },
-    });
-
-    return NextResponse.json(user);
-  } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
-  }
-}
-
 // DELETE /api/users/[id] - 删除用户
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
@@ -63,4 +41,3 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 }
-

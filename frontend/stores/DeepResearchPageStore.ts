@@ -99,7 +99,7 @@ export class DeepResearchPageStore {
       const asyncTasks = threads.map(async (thread) => {
         const conversation = new Conversation(thread.id, this.client, thread.title);
         this.conversations.push(conversation);
-        await conversation.restoreDataByThreadId(thread.id);
+        await conversation.restoreBasicDataByThreadId(thread.id);
       });
 
       yield Promise.all(asyncTasks);
@@ -153,8 +153,10 @@ export class DeepResearchPageStore {
   @action.bound
   switchToConversation(threadId: string) {
     const conversation = this.conversations.find(c => c.threadId === threadId);
+
     if (conversation) {
       this.currentConversation = conversation;
+      this.currentConversation.restoreChatHistoryByThreadId(threadId);
     }
   }
 
@@ -294,7 +296,10 @@ export class DeepResearchPageStore {
       this.isSendingMessage = true;
       
       // 调用 conversation 的 executor，传入 executionResponse，让它在流式接收过程中更新
-      yield conversation.executor.invoke(userMessageContent, executionResponse);
+      yield conversation.executor.invoke({
+        input: { messages: [{ role: 'user', content: userMessageContent }] },
+        executionResponse
+      });
 
       // 成功完成后，更新 thread 标题（使用第一条用户消息作为标题）
       if (!conversation.title) {

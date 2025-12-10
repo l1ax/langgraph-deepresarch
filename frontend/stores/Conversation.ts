@@ -30,6 +30,8 @@ export class Conversation {
   @observable
   createdAt: string = new Date().toISOString();
 
+  threadState: ThreadState<{events: Array<BaseEvent.IEventData>}> | null = null;
+
   getTitle = action(() => {
     if (this.title) {
       const title = this.title.slice(0, 30);
@@ -94,6 +96,8 @@ export class Conversation {
   /** 从 events 数组恢复对话历史 */
   @action.bound
   restoreFromEvents(events: BaseEvent.IEventData[]): void {
+    this.elements = [];
+
     // 以 human chat event 为分割点，将两个 human chat event 之间的事件包装成 assistantElement
     let currentExecutionResponse: ExecutionResponse | null = null;
 
@@ -135,7 +139,7 @@ export class Conversation {
 
   /** 恢复历史数据 */
   @flow.bound
-  *restoreDataByThreadId(threadId: string) {
+  *restoreBasicDataByThreadId(threadId: string) {
     try {
       if (!this.client) {
         throw new Error('Client not initialized');
@@ -145,25 +149,34 @@ export class Conversation {
   
       const state: ThreadState<{events: Array<BaseEvent.IEventData>}> = yield this.client.threads.getState(threadId);
 
+      this.threadState = state;
+
       if (state.created_at) {
         this.createdAt = state.created_at;
-      }
-
-      const events = state.values.events;
-  
-      if (events.length > 0) {
-        this.restoreFromEvents(events);
-      }
-      else {
-        const welcomeEvent = ChatEvent.create(
-          'welcome',
-          '你好！我是 DeepResearch 助手。请告诉我你想研究什么主题？'
-        );
-        this.addStandaloneAssistantEvent(welcomeEvent);
       }
     }
     finally {
       this.isLoading = false;
+    }
+  }
+
+  @action.bound
+  restoreChatHistoryByThreadId(threadId: string) {
+    if (!this.client) {
+      throw new Error('Client not initialized');
+    }
+
+    const events = this.threadState?.values.events ?? [];
+  
+    if (events.length > 0) {
+      this.restoreFromEvents(events);
+    }
+
+    if (this.threadState?.next && this.threadState.next.length > 0) {
+      this.executor.invoke({
+        input: null,
+        executionResponse: new ExecutionResponse(),
+      });
     }
   }
 

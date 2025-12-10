@@ -20,7 +20,7 @@ export abstract class BaseEvent<T extends BaseEvent.IContent> implements BaseEve
     /**
      * 序列化为JSON对象
      */
-    toJSON(): Record<string, unknown> {
+    toJSON(): BaseEvent.IJsonData {
         return {
             id: this.id,
             eventType: this.eventType,
@@ -112,5 +112,18 @@ export namespace BaseEvent {
         data: unknown;
         /** 内容聚合规则（可选，默认为 replace） */
         aggregateRule?: AggregateRule;
+    }
+
+    export interface IJsonData<T = Record<string, unknown>> {
+        /** 事件唯一标识 */
+        id: string;
+        /** 事件类型 */
+        eventType: EventType;
+        /** 事件状态 */
+        status: EventStatus;
+        /** 事件内容 */
+        content: T;
+        /** 父事件 ID（可选，用于构建事件树） */
+        parentId?: string;
     }
 }

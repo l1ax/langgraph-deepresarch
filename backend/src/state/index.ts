@@ -1,5 +1,6 @@
 import {Annotation, messagesStateReducer} from '@langchain/langgraph';
 import { BaseMessage } from '@langchain/core/messages';
+import {BaseEvent} from '../outputAdapters';
 
 export const StateAnnotation = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
@@ -56,12 +57,16 @@ export const StateAnnotation = Annotation.Root({
             return right;
         },
     }),
-    events: Annotation<Record<string, unknown>[]>({
-        reducer: (left: Record<string, unknown>[], right: Record<string, unknown> | Record<string, unknown>[]) => {
-            if (Array.isArray(right)) {
-                return left.concat(right);
+    events: Annotation<BaseEvent.IJsonData[]>({
+        reducer: (left: BaseEvent.IJsonData[], right: BaseEvent.IJsonData | BaseEvent.IJsonData[]) => {
+            const concatEvents = Array.isArray(right) ? right : [right];
+            for (const event of concatEvents) {
+                if (left.find(e => e.id === event.id)) {
+                    continue;
+                }
+                left.push(event);
             }
-            return left.concat([right]);
+            return left;
         },
         default: () => [],
     }),

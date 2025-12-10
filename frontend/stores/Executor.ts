@@ -1,5 +1,5 @@
 import { observable, action, makeObservable } from 'mobx';
-import { Client } from '@langchain/langgraph-sdk';
+import { Client, Config } from '@langchain/langgraph-sdk';
 import {
   BaseEvent,
   AnyEvent,
@@ -84,13 +84,23 @@ export class Executor {
 
   /**
    * 执行对话请求
-   * @param content 用户输入的内容
-   * @param executionResponse 已创建的 ExecutionResponse 实例（可选，如果不提供则创建新的）
-   * @returns ExecutionResponse 包含本次执行的所有事件和 treeView
    */
   @action.bound
-  async invoke(content: string, executionResponse?: ExecutionResponse): Promise<ExecutionResponse> {
+  async invoke(
+    params: {
+      input: Record<string, unknown> | null;
+      executionResponse?: ExecutionResponse;
+      config?: Config;
+    }
+  ): Promise<ExecutionResponse> {
     const { client, threadId } = this.conversation;
+    const { input, executionResponse, config } = params;
+    const defaultConfig: Config = {
+      recursion_limit: 100,
+      configurable: {
+        thread_id: threadId
+      }
+    }
 
     if (!client || !threadId) {
       throw new Error('Conversation client or threadId not initialized');
@@ -103,16 +113,14 @@ export class Executor {
 
     try {
       const stream = client.runs.stream(threadId, GRAPH_ID, {
-        input: {
-          messages: [{ role: 'user', content }],
-        },
+        input,
         streamMode: 'custom',
+        multitaskStrategy: 'rollback',
+        durability: "sync",
         config: {
-          recursion_limit: 100,
-          configurable: {
-            thread_id: threadId
-          }
-        },
+          ...defaultConfig,
+          ...config
+        }
       });
 
       for await (const chunk of stream) {

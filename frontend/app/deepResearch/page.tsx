@@ -269,7 +269,7 @@ const DeepResearchPage = observer(() => {
                     )}
                     <div className="flex flex-wrap gap-3 justify-center">
                       {[
-                        '2024 年 AI 投融资趋势',
+                        '对比OPENAI和Google在大模型商业化路径的不同，主要是近三年',
                         '为初创公司设计研究流程',
                         'Tavily 搜索在研究代理中的作用',
                         'Supervisor Agent 的协作模式'

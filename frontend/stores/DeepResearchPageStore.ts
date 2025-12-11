@@ -164,7 +164,7 @@ export class DeepResearchPageStore {
         this.isHistoryLoading = true;
         this.currentConversation = conversation;
         // 使用 yield 处理异步操作，确保 loading 状态持续到加载完成
-        yield conversation.restoreChatHistoryByThreadId(threadId);
+        yield flowResult(conversation.restoreChatHistoryByThreadId(threadId));
       } catch (error) {
         console.error('Failed to restore chat history:', error);
         this.showToast('加载会话历史失败', 'error');

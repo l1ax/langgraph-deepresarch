@@ -26,8 +26,6 @@ COPY package.json pnpm-lock.yaml* ./
 # 必须在 pnpm install 之前复制，否则 postinstall 脚本找不到 schema 会报错
 COPY prisma ./prisma
 
-RUN rm -f pnpm-lock.yaml
-
 # 安装依赖
 # --unsafe-perm: 防止 root 用户权限问题
 # --no-optional: 跳过不兼容的可选依赖

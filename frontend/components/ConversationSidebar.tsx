@@ -23,15 +23,6 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [threadToDelete, setThreadToDelete] = React.useState<string | null>(null);
 
-  /** 处理登录 */
-  const handleSignIn = async () => {
-    try {
-      await flowResult(userStore.signInWithGitHub());
-    } catch (error) {
-      store.showToast('GitHub 登录失败，请重试', 'error');
-    }
-  };
-
   /** 处理登出 */
   const handleSignOut = async () => {
     try {
@@ -180,7 +171,7 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
 
         {/* 底部：用户信息 */}
         <div className="p-4 border-t border-sidebar-border bg-sidebar">
-          {userStore.currentUser ? (
+          {userStore.currentUser && (
             <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-xl hover:bg-sidebar-accent/50 transition-colors">
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Avatar className="h-8 w-8 shrink-0">
@@ -207,15 +198,6 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
-          ) : (
-            <Button
-              onClick={handleSignIn}
-              disabled={userStore.isAuthLoading}
-              className="w-full gap-2 rounded-full"
-            >
-              <Github className="h-4 w-4" />
-              使用 GitHub 登录
-            </Button>
           )}
         </div>
       </div>

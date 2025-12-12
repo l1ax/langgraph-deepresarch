@@ -39,9 +39,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 接收构建参数 (如果有 NEXT_PUBLIC_ 变量需要在这里接收)
 ARG NEXT_PUBLIC_LANGGRAPH_API_URL
 ENV NEXT_PUBLIC_LANGGRAPH_API_URL=${NEXT_PUBLIC_LANGGRAPH_API_URL}
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 
 # 再次生成 Prisma Client (双重保险)
 RUN npx prisma generate

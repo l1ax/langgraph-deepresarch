@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.LANGGRAPH_BACKEND_URL || 'http://localhost:2024';
 
-/**
- * POST /api/langgraph/threads - 创建新的 LangGraph thread
- * 转发到 backend 的 /api/langgraph/threads 接口
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

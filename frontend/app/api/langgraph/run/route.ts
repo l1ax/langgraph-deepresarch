@@ -2,15 +2,10 @@ import { NextRequest } from 'next/server';
 
 const BACKEND_URL = process.env.LANGGRAPH_BACKEND_URL || 'http://localhost:2024';
 
-/**
- * POST /api/langgraph/run - 运行 LangGraph graph（流式响应）
- * 转发到 backend 的 /api/langgraph/run 接口，支持 SSE 流式传输
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // 向 backend 发起流式请求
     const response = await fetch(`${BACKEND_URL}/api/langgraph/run`, {
       method: 'POST',
       headers: {
@@ -30,7 +25,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 创建流式响应，直接转发 backend 的 SSE 流
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader();
@@ -46,7 +40,6 @@ export async function POST(request: NextRequest) {
               controller.close();
               break;
             }
-            // 直接转发数据块
             controller.enqueue(value);
           }
         } catch (error) {
@@ -58,7 +51,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 返回流式响应，设置正确的 SSE headers
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',

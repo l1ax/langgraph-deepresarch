@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.LANGGRAPH_BACKEND_URL || 'http://localhost:2024';
 
-/**
- * GET /api/langgraph/threads/:threadId/state - 获取 LangGraph thread 状态
- * 转发到 backend 的 /api/langgraph/threads/:threadId/state 接口
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ threadId: string }> }

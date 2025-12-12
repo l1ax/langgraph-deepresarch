@@ -144,7 +144,7 @@ export class Conversation {
     try {
       this.isLoading = true;
 
-      // 调用自托管 API 获取线程状态
+      // 调用自托管 API 获取线程状态（通过 Next.js API 路由转发）
       const response: Response = yield fetch(
         `/api/langgraph/threads/${threadId}/state`
       );

@@ -130,7 +130,8 @@ export class Executor {
       //   this.handleChunk(chunk as StreamChunk, response);
       // }
 
-      const response = await fetch('/api/langgraph/run', {
+      // 使用 Next.js API 路由转发请求，支持流式响应
+      const response = await fetch(`/api/langgraph/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

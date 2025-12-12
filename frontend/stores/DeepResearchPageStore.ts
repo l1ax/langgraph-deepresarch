@@ -262,8 +262,8 @@ export class DeepResearchPageStore {
       try {
         this.isCreatingConversation = true;
 
-        // 调用自托管 API 创建 thread
-        const response: Response = yield fetch('/api/langgraph/threads', {
+        // 调用自托管 API 创建 thread（通过 Next.js API 路由转发）
+        const response: Response = yield fetch(`/api/langgraph/threads`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ metadata: {} })

@@ -126,23 +126,48 @@ export class Executor {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
 
-        const lines = chunk.split('\n\n');
-        for (const line of lines) {
+        for (const part of parts) {
+          const lines = part.split('\n');
+          for (const line of lines) {
             if (line.startsWith('data: ')) {
-                const jsonStr = line.replace('data: ', '');
-                if (jsonStr) {
-                    const data = JSON.parse(jsonStr);
-                    console.log("收到流数据:", data);
-                    this.handleChunk(data as StreamChunk, currentExecutionResponse);
+              const jsonStr = line.replace('data: ', '').trim();
+              if (jsonStr) {
+                try {
+                  const data = JSON.parse(jsonStr);
+                  this.handleChunk(data as StreamChunk, currentExecutionResponse);
+                } catch (error) {
+                  console.error('JSON parse error:', error);
                 }
+              }
             }
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        const lines = buffer.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.replace('data: ', '').trim();
+            if (jsonStr) {
+              try {
+                const data = JSON.parse(jsonStr);
+                this.handleChunk(data as StreamChunk, currentExecutionResponse);
+              } catch (error) {
+                console.error('JSON parse error:', error);
+              }
+            }
+          }
         }
       }
 

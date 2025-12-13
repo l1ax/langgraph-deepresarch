@@ -26,20 +26,17 @@ const compressModel = new ChatDeepSeek({
 export const compressResearch = traceable(async (
     state: typeof ResearcherStateAnnotation.State
 ) => {
-    // 使用当前日期格式化系统提示词
     const systemPrompt = compressResearchSystemPrompt.replace(
         '{date}',
         getTodayStr()
     );
 
-    // 准备用于压缩的消息
     const messages = [
         new SystemMessage({ content: systemPrompt }),
         ...state.researcher_messages,
         new HumanMessage({ content: compressResearchHumanMessage }),
     ];
 
-    // 调用压缩模型
     const response = await compressModel.invoke(messages);
 
     // 工具输出（think tool的reflection结果 & tavily search压缩总结后的以url为单位的搜索结果）以及AI tool call的输出

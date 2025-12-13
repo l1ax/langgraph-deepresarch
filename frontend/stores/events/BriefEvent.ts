@@ -15,11 +15,17 @@ export class BriefEvent extends BaseEvent<BriefEvent.IContent> {
   get researchBrief(): string {
     return this.content.data.research_brief;
   }
+
+  /** 研究概要推理过程 */
+  get reasoning(): string | undefined {
+    return this.content.data.research_brief_reasoning;
+  }
 }
 
 export namespace BriefEvent {
   export interface IData {
     research_brief: string;
+    research_brief_reasoning?: string;
   }
 
   export interface IContent extends BaseEvent.IContent {

@@ -15,10 +15,11 @@ const NODE_NAME = 'write_research_brief';
 
 export interface ResearchQuestion {
   research_brief: string;
+  research_brief_reasoning: string;
 }
 
 const zhipuChat = new ChatOpenAI({
-  model: "glm-4.5-airx",
+  model: "glm-4.5",
   apiKey: process.env.ZHIPU_API_KEY,
   configuration: {
     baseURL: process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4",
@@ -40,7 +41,6 @@ export const writeResearchBrief = traceable(async (
   
   const briefEvent = new BriefEvent(briefEventId);
 
-  // 发送 pending 状态
   if (config.writer) {
     config.writer(briefEvent.setStatus('pending').toJSON());
   }
@@ -49,13 +49,11 @@ export const writeResearchBrief = traceable(async (
     .replace('{messages}', getBufferString(state.messages || []))
     .replace('{date}', getTodayStr());
 
-  // 发送 running 状态
   if (config.writer) {
     config.writer(briefEvent.setStatus('running').toJSON());
   }
 
   try {
-    // 使用stream方式调用LLM
     let fullResponse = '';
     const stream = await zhipuChat.stream(
       [new HumanMessage({ content: promptContent })],
@@ -66,7 +64,6 @@ export const writeResearchBrief = traceable(async (
       const content = chunk.content;
       if (content) {
         const chunkStr = typeof content === 'string' ? content : JSON.stringify(content);
-        // 过滤空字符串
         if (chunkStr.length > 0) {
           fullResponse += chunkStr;
 
@@ -80,18 +77,15 @@ export const writeResearchBrief = traceable(async (
       }
     }
 
-    // 解析完整的JSON
     const researchQuestion: ResearchQuestion = JSON.parse(fullResponse);
 
     // 发送最终结果（使用完整的data）
     briefEvent.content.data = researchQuestion;
     briefEvent.content.aggregateRule = undefined;
-    // 发送 finished 状态
     if (config.writer) {
       config.writer(briefEvent.setStatus('finished').toJSON());
     }
 
-    // 存储 brief event 到 state.events
     const eventsToAdd = [briefEvent.toJSON()];
 
     return {
@@ -102,7 +96,6 @@ export const writeResearchBrief = traceable(async (
       events: eventsToAdd,
     };
   } catch (error) {
-    // 发送 error 状态
     if (config.writer) {
       config.writer(briefEvent.setStatus('error').toJSON());
     }

@@ -14,10 +14,8 @@ import { getTodayStr } from '../utils';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// 初始化 Tavily 客户端
 const tavilyClient = tavily({ apiKey: process.env.TAVILY_API_KEY });
 
-// 初始化 DeepSeek Chat
 const deepSeekChat = new ChatDeepSeek({
     model: 'deepseek-chat',
     temperature: 0,
@@ -27,17 +25,11 @@ const deepSeekChat = new ChatDeepSeek({
     },
 });
 
-/**
- * 网页摘要输出的schema。
- */
 interface Summary {
     summary: string;
     key_excerpts: string;
 }
 
-/**
- * 来自 Tavily API 的搜索结果结构。
- */
 interface TavilySearchResult {
     title: string;
     url: string;
@@ -54,12 +46,10 @@ interface TavilyResponse {
  */
 async function summarizeWebpageContent(webpageContent: string): Promise<string> {
     try {
-        // 使用网页内容和当前日期格式化提示词
         const promptContent = summarizeWebpagePrompt
             .replace('{webpage_content}', webpageContent)
             .replace('{date}', getTodayStr());
 
-        // 使用stream方式生成结构化输出的摘要
         let fullResponse = '';
         const stream = await deepSeekChat.stream([
             {
@@ -71,21 +61,17 @@ async function summarizeWebpageContent(webpageContent: string): Promise<string> 
         });
 
         for await (const chunk of stream) {
-            const content = chunk.content;
-            if (content && typeof content === 'string' && content.length > 0) {
-                fullResponse += content;
+            if (chunk.content) {
+                fullResponse += chunk.content;
             }
         }
 
         const summary: Summary = JSON.parse(fullResponse);
-
-        // 使用清晰的结构格式化摘要
         const formattedSummary = `<summary>\n${summary.summary}\n</summary>\n\n<key_excerpts>\n${summary.key_excerpts}\n</key_excerpts>`;
 
         return formattedSummary;
     } catch (error) {
         console.error(`Failed to summarize webpage: ${error}`);
-        // 生成失败则直接截断
         return webpageContent.length > 1000
             ? webpageContent.slice(0, 1000) + '...'
             : webpageContent;
@@ -102,9 +88,8 @@ function deduplicateSearchResults(
 
     for (const response of searchResults) {
         for (const result of response.results) {
-            const url = result.url;
-            if (!uniqueResults[url]) {
-                uniqueResults[url] = result;
+            if (!uniqueResults[result.url]) {
+                uniqueResults[result.url] = result;
             }
         }
     }
@@ -121,14 +106,9 @@ async function processSearchResults(
     const summarizedResults: Record<string, { title: string; content: string }> = {};
 
     for (const [url, result] of Object.entries(uniqueResults)) {
-        // 如果没有原始内容用于摘要，则使用现有内容
-        let content: string;
-        if (!result.raw_content) {
-            content = result.content;
-        } else {
-            // 摘要原始内容以便更好地处理
-            content = await summarizeWebpageContent(result.raw_content);
-        }
+        const content = result.raw_content
+            ? await summarizeWebpageContent(result.raw_content)
+            : result.content;
 
         summarizedResults[url] = {
             title: result.title,
@@ -174,7 +154,6 @@ async function tavilySearchMultiple(
 ): Promise<TavilyResponse[]> {
     const searchDocs: TavilyResponse[] = [];
 
-    // 顺序执行搜索
     for (const query of searchQueries) {
         const result = await tavilyClient.search(query, {
             maxResults,
@@ -206,21 +185,16 @@ Returns:
     }),
     func: async (input: { query: string }): Promise<string> => {
         const { query } = input;
-        // 执行单个查询的搜索
         const searchResults = await tavilySearchMultiple(
             [query],
-            3, // maxResults
-            'general', // topic
-            true // includeRawContent
+            3,
+            'general',
+            true
         );
 
-        // 按 URL 去重结果
         const uniqueResults = deduplicateSearchResults(searchResults);
-
-        // 使用摘要处理结果
         const summarizedResults = await processSearchResults(uniqueResults);
 
-        // 格式化输出以供使用
         return formatSearchOutput(summarizedResults);
     },
 });

@@ -112,8 +112,13 @@ Before returning the brief, verify:
 If any content fails this check, remove it.
 </Self-Check Before Output>
 
+<Reasoning>
+Explain your reasoning for the research question.
+</Reasoning>
+
 Return the JSON object in the following format:
 {
+  "research_brief_reasoning": "<the reasoning for the research question>",
   "research_brief": "<the research question>"
 }
 `;

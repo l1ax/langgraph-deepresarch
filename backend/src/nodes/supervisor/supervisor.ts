@@ -22,8 +22,7 @@ dotenv.config();
 
 const NODE_NAME = 'supervisor';
 
-// 配置监督器模型
-// 注意：使用 deepseek-chat 而非 deepseek-reasoner
+// 使用 deepseek-chat 而非 deepseek-reasoner
 // deepseek-reasoner 在工具调用时需要特殊的 reasoning_content 字段
 // deepseek-chat 对工具调用有更好的支持
 const supervisorModel = new ChatDeepSeek({
@@ -35,35 +34,21 @@ const supervisorModel = new ChatDeepSeek({
     },
 });
 
-// 系统常量
-// 单个研究代理的最大工具调用迭代次数
-// 这防止无限循环并控制每个主题的研究深度
 const maxResearcherIterations = 6;
-
-// 监督器可以启动的最大并发研究代理数
-// 这被传递给 lead_researcher_prompt 以限制并行研究任务
 const maxConcurrentResearchers = 3;
 
 const supervisorTools = [conductResearchTool, researchCompleteTool, thinkTool];
 const supervisorModelWithTools = supervisorModel.bindTools(supervisorTools);
 
-/**
- * 监督器节点
- *
- * 协调研究活动并决定下一步行动。
- */
 export const supervisor = traceable(async (state: typeof StateAnnotation.State, config?: LangGraphRunnableConfig) => {
     const threadId = config?.configurable?.thread_id as string | undefined;
     const checkpointId = config?.configurable?.checkpoint_id as string | undefined;
     const iteration = state.research_iterations || 0;
     
-    // 检查是否已经存在 supervisor_group_id，如果存在则复用，避免重复创建
     let supervisorGroupId = state.supervisor_group_id;
     let supervisorEvent: GroupEvent | null = null;
     
     if (!supervisorGroupId) {
-        // 第一次调用，创建新的 supervisor group event
-        // 使用确定性 ID
         const groupEventId = threadId 
             ? BaseEvent.generateDeterministicId(threadId, checkpointId, NODE_NAME, '/supervisor/group', 0)
             : undefined;
@@ -73,11 +58,9 @@ export const supervisor = traceable(async (state: typeof StateAnnotation.State, 
             config.writer(supervisorEvent.setStatus('running').toJSON());
         }
     }
-    // 如果 supervisorGroupId 已存在，则复用，不创建新的事件
 
     const supervisorMessages = state.supervisor_messages || [];
 
-    // 使用当前日期和约束准备系统消息
     const systemPrompt = leadResearcherPrompt
         .replace('{date}', getTodayStr())
         .replace('{max_concurrent_research_units}', String(maxConcurrentResearchers))
@@ -85,10 +68,8 @@ export const supervisor = traceable(async (state: typeof StateAnnotation.State, 
 
     const messages = [new SystemMessage({ content: systemPrompt }), ...supervisorMessages];
 
-    // 对下一步研究步骤做出决策
     const response = await supervisorModelWithTools.invoke(messages, config);
 
-    // 如果 LLM 返回了文本内容（不是工具调用），发送 ChatEvent
     const eventsToAdd: BaseEvent.IJsonData[] = [];
     const textContent = extractContent(response.content);
     if (textContent && config?.writer) {
@@ -117,7 +98,6 @@ export const supervisor = traceable(async (state: typeof StateAnnotation.State, 
         eventsToAdd.push(supervisorEvent.toJSON());
     }
 
-    // Store events to state.events
     if (eventsToAdd.length > 0) {
         returnValue.events = eventsToAdd;
     }

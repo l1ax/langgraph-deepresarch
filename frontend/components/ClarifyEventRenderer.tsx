@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { parseIncompleteJson } from '@/lib/json-parser';
 import { ClarifyEvent } from '@/stores';
 import { EventRendererProps } from '@/services';
+import {Streamdown} from 'streamdown';
 
 /**
  * ClarifyEvent 渲染器组件
@@ -91,7 +92,7 @@ export const ClarifyEventRenderer = observer(
               需要更多信息
             </p>
             <p className="text-sm text-amber-600/90 dark:text-amber-400/90 leading-relaxed">
-              {question}
+              <Streamdown>{question}</Streamdown>
             </p>
           </div>
         </div>
@@ -111,7 +112,7 @@ export const ClarifyEventRenderer = observer(
         </div>
         <div className="flex-1 space-y-1.5">
           <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-            理解确认
+            需求确认
           </p>
           <p className="text-sm text-emerald-600/90 dark:text-emerald-400/90 leading-relaxed">
             {verification || '已理解您的研究需求，正在开始研究...'}

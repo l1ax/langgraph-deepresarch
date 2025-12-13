@@ -16,16 +16,6 @@ import {BaseEvent, ChatEvent} from '../../outputAdapters';
 import {traceable} from 'langsmith/traceable';
 dotenv.config();
 
-// 配置写作模型
-// const writerModel = new ChatOpenAI({
-//     model: 'gpt-4o',
-//     temperature: 0,
-//     maxTokens: 32000,
-//     configuration: {
-//         baseURL: process.env.OPENAI_BASE_URL,
-//         apiKey: process.env.OPENAI_API_KEY,
-//     },
-// });
 const writerModel = new ChatDeepSeek({
     model: 'deepseek-reasoner',
     temperature: 0,
@@ -35,11 +25,6 @@ const writerModel = new ChatDeepSeek({
     },
 });
 
-/**
- * Final Report Generation Node
- *
- * 将所有研究结果合成为综合性最终报告
- */
 export const finalReportGeneration = traceable(async (
     state: typeof StateAnnotation.State,
     config: LangGraphRunnableConfig
@@ -56,8 +41,6 @@ export const finalReportGeneration = traceable(async (
 
     const notes = state.notes || [];
     const researchBrief = state.research_brief || '';
-
-    // 合并所有研究笔记
     const findings = notes.join('\n\n');
 
     const threadId = config?.configurable?.thread_id as string | undefined;
@@ -78,13 +61,11 @@ export const finalReportGeneration = traceable(async (
         config.writer(chatEvent.setStatus('running').toJSON());
     }
 
-    // 准备最终报告生成提示词
     const finalReportPrompt = finalReportGenerationPrompt
         .replace('{research_brief}', researchBrief)
         .replace('{findings}', findings)
         .replace('{date}', getTodayStr());
 
-    // 生成最终报告
     const response = await writerModel.stream(
         [new HumanMessage({ content: finalReportPrompt })],
         config
@@ -103,7 +84,6 @@ export const finalReportGeneration = traceable(async (
         config.writer(chatEvent.setStatus('finished').toJSON());
     }
 
-    // Store chat event to state.events
     const eventsToAdd = [chatEvent.toJSON()];
 
     return {

@@ -22,6 +22,8 @@ export namespace BriefEvent {
         data: {
             /** 研究概要内容 */
             research_brief: string;
+            /** 研究概要推理过程 */
+            research_brief_reasoning?: string;
         } | string;
     }
 }

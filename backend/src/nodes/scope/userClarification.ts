@@ -1,7 +1,3 @@
-/**
- * @file 用户澄清节点 - 确认是否需要用户进一步说明
- */
-
 import { AIMessage, getBufferString } from "@langchain/core/messages";
 import { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
 import { ChatDeepSeek } from '@langchain/deepseek';
@@ -41,8 +37,6 @@ export const clarifyWithUser = traceable(async (
   const eventsToAdd: Record<string, unknown>[] = [];
   const userMessage = state.messages[0];
   if (userMessage && userMessage.getType() === 'human') {
-    // 生成确定性 ID，确保 rollback 后重新执行时 ID 保持一致
-    // 使用 index=0 确保 human chat event 排在最前面
     const humanEventId = threadId 
       ? BaseEvent.generateDeterministicId(threadId, checkpointId, NODE_NAME, '/human/chat', 0)
       : undefined;
@@ -52,25 +46,21 @@ export const clarifyWithUser = traceable(async (
     userChatEvent.setStatus('finished');
 
     // 直接存储到数据库（不通过 writer，避免前端重复渲染用户消息）
-    // 使用 await 确保 human chat event 先于 clarify event 存储
     if (threadId) {
       await eventStore.upsertEvent(threadId, userChatEvent.toJSON()).catch(err => {
         console.error('[clarifyWithUser] Failed to persist human chat event:', err);
       });
     }
 
-    // 将用户消息事件存储到待添加列表
     eventsToAdd.push(userChatEvent.toJSON() as unknown as Record<string, unknown>);
   }
 
-  // 生成确定性 ID
   const clarifyEventId = threadId 
     ? BaseEvent.generateDeterministicId(threadId, checkpointId, NODE_NAME, '/ai/clarify', 0)
     : undefined;
   
   const event = new ClarifyEvent(clarifyEventId);
 
-  // 发送 pending 状态
   if (config.writer) {
     config.writer(event.setStatus('pending').toJSON());
   }
@@ -79,13 +69,11 @@ export const clarifyWithUser = traceable(async (
     .replace('{messages}', getBufferString(state.messages || []))
     .replace('{date}', getTodayStr());
 
-  // 发送 running 状态
   if (config.writer) {
     config.writer(event.setStatus('running').toJSON());
   }
 
   try {
-    // 使用stream方式调用LLM
     let fullResponse = '';
     const stream = await deepSeekChat.stream([
       {
@@ -97,35 +85,30 @@ export const clarifyWithUser = traceable(async (
     });
 
     for await (const chunk of stream) {
-      const content = chunk.content;
-      if (content && typeof content === 'string' && content.length > 0) {
-
-        fullResponse += content;
+      if (chunk.content) {
+        const contentStr = typeof chunk.content === 'string' ? chunk.content : String(chunk.content);
+        fullResponse += contentStr;
 
         // 发送流式更新（带aggregateRule: 'concat'）
         if (config.writer) {
-          event.content.data = content;
+          event.content.data = contentStr;
           event.content.aggregateRule = 'concat';
           config.writer(event.setStatus('running').toJSON());
         }
       }
     }
 
-    // 解析完整的JSON
     const clarification: ClarifyWithUser = JSON.parse(fullResponse);
 
     // 发送最终结果（使用完整的data）
     event.content.data = clarification;
     event.content.aggregateRule = undefined;
-    // 发送 finished 状态
     if (config.writer) {
       config.writer(event.setStatus('finished').toJSON());
     }
 
-    // 将 clarify event 也存储到 state.events
     eventsToAdd.push(event.toJSON() as unknown as Record<string, unknown>);
 
-    // Route based on clarification need
     if (clarification.need_clarification) {
       return new Command({
         goto: "__end__",
@@ -144,7 +127,6 @@ export const clarifyWithUser = traceable(async (
       });
     }
   } catch (error) {
-    // 发送 error 状态
     if (config.writer) {
       config.writer(event.setStatus('error').toJSON());
     }

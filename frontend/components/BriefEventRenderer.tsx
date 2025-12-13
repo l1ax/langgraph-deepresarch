@@ -17,7 +17,7 @@ export const BriefEventRenderer = observer(
   ({ data, status, roleName: _roleName, className }: EventRendererProps<BriefEvent.IData>) => {
     // 解析可能不完整的JSON字符串
     const parsedData = parseIncompleteJson<BriefEvent.IData>(data as BriefEvent.IData | string);
-    const { research_brief } = parsedData;
+    const { research_brief, research_brief_reasoning } = parsedData;
 
     const isPending = status === 'pending';
     const isRunning = status === 'running';
@@ -94,40 +94,56 @@ export const BriefEventRenderer = observer(
         </div>
 
         {/* 内容区域 */}
-        <div
-          className={cn(
-            'prose prose-sm dark:prose-invert max-w-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5',
-            isError
-              ? 'prose-headings:text-destructive prose-p:text-destructive/90'
-              : 'prose-headings:text-foreground prose-p:text-muted-foreground prose-li:text-muted-foreground prose-strong:text-foreground'
-          )}
-        >
-          {isError ? (
-            <p className="text-destructive">生成研究概要时发生错误，请重试。</p>
-          ) : research_brief ? (
+        <div className="space-y-4">
+          {/* Reasoning - 思考过程，优先显示 */}
+          {research_brief_reasoning && !isError && (
             <div className="relative">
-              <Streamdown>{research_brief}</Streamdown>
-              {isRunning && (
-                <span className="inline-block w-0.5 h-4 ml-0.5 bg-primary animate-pulse" />
+              <div className="text-xs text-muted-foreground/70 leading-relaxed prose prose-xs dark:prose-invert max-w-none prose-p:text-muted-foreground/70 prose-p:my-1.5 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5">
+                <Streamdown>{research_brief_reasoning}</Streamdown>
+              </div>
+              {/* 分隔线，只在有 research_brief 时显示 */}
+              {research_brief && (
+                <div className="mt-4 mb-2 border-t border-border/30" />
               )}
             </div>
-          ) : (
-            <p className="text-muted-foreground italic flex items-center gap-2">
-              {isPending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin inline-block" />
-                  正在准备生成研究概要...
-                </>
-              ) : isRunning ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin inline-block" />
-                  正在生成研究概要...
-                </>
-              ) : (
-                '研究概要内容为空'
-              )}
-            </p>
           )}
+
+          {/* Research Question - 主要内容 */}
+          <div
+            className={cn(
+              'prose prose-sm dark:prose-invert max-w-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5',
+              isError
+                ? 'prose-headings:text-destructive prose-p:text-destructive/90'
+                : 'prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground'
+            )}
+          >
+            {isError ? (
+              <p className="text-destructive">生成研究概要时发生错误，请重试。</p>
+            ) : research_brief ? (
+              <div className="relative">
+                <Streamdown>{research_brief}</Streamdown>
+                {isRunning && (
+                  <span className="inline-block w-0.5 h-4 ml-0.5 bg-primary animate-pulse" />
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground italic flex items-center gap-2">
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin inline-block" />
+                    正在准备生成研究概要...
+                  </>
+                ) : isRunning ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin inline-block" />
+                    正在生成研究概要...
+                  </>
+                ) : (
+                  '研究概要内容为空'
+                )}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );

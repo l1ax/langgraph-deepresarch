@@ -36,10 +36,8 @@ export const researchLlmCall = traceable(async (
     state: typeof ResearcherStateAnnotation.State,
     config: LangGraphRunnableConfig
 ) => {
-    // 使用当前日期格式化提示词
     const systemPrompt = researchAgentPrompt.replace('{date}', getTodayStr());
 
-    // 使用工具调用模型
     const response = await modelWithTools.invoke([
         new SystemMessage({ content: systemPrompt }),
         ...state.researcher_messages,

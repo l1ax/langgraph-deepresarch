@@ -47,13 +47,11 @@ export const supervisorTools = traceable(async (
     const researchIterations = state.research_iterations || 0;
     const mostRecentMessage = supervisorMessages[supervisorMessages.length - 1];
 
-    // 初始化单个返回模式的变量
     const toolMessages: ToolMessage[] = [];
     let allRawNotes: string[] = [];
     let shouldEnd = false;
     const eventsToAdd: BaseEvent.IJsonData[] = [];
 
-    // 首先检查退出标准
     const exceededIterations = researchIterations >= maxResearcherIterations;
     const noToolCalls =
         !mostRecentMessage ||
@@ -74,21 +72,16 @@ export const supervisorTools = traceable(async (
         shouldEnd = true;
     }
 
-    // 获取 tool_calls 并为每个创建 ToolCallEvent
     // 使用 Map 存储 tool_call_id -> event 的映射，方便后续匹配结果
     const toolCallEventsMap = new Map<string, ToolCallEvent>();
 
-    // 执行所有工具调用
     try {
-        // 获取工具调用数组
         const toolCalls = 'tool_calls' in mostRecentMessage && Array.isArray(mostRecentMessage.tool_calls)
             ? mostRecentMessage.tool_calls
             : [];
 
-        // 获取 supervisor_group_id
         const supervisorGroupId = state.supervisor_group_id;
 
-        // 为每个工具调用创建并发送 running 状态的 ToolCallEvent
         const threadId = config?.configurable?.thread_id as string | undefined;
         const checkpointId = config?.configurable?.checkpoint_id as string | undefined;
         const nodeName = 'supervisorTools';
@@ -129,7 +122,6 @@ export const supervisorTools = traceable(async (
             eventsToAdd.push(event.toJSON());
         }
 
-        // 将 think_tool 调用与其他调用分开
         const thinkToolCalls = toolCalls.filter(
             (toolCall: any) => toolCall.name === 'think_tool'
         );
@@ -142,7 +134,6 @@ export const supervisorTools = traceable(async (
             (toolCall: any) => toolCall.name === 'ResearchComplete'
         );
 
-        // 处理 think_tool 调用（同步）
         for (const toolCall of thinkToolCalls) {
             const observation = await thinkTool.invoke(toolCall.args);
             const toolCallId = toolCall.id || '';
@@ -153,7 +144,6 @@ export const supervisorTools = traceable(async (
                 })
             );
             
-            // 发送 finished 状态
             const event = toolCallEventsMap.get(toolCallId);
             if (event && config?.writer) {
                 event.setToolResult(observation);
@@ -161,7 +151,6 @@ export const supervisorTools = traceable(async (
             }
         }
 
-        // 处理 ResearchComplete 调用
         for (const toolCall of researchCompleteCalls) {
             const toolCallId = toolCall.id || '';
             const resultContent = 'Research marked as complete';
@@ -173,7 +162,6 @@ export const supervisorTools = traceable(async (
             );
             shouldEnd = true;
             
-            // 发送 finished 状态
             const event = toolCallEventsMap.get(toolCallId);
             if (event && config?.writer) {
                 event.setToolResult(resultContent);
@@ -181,10 +169,8 @@ export const supervisorTools = traceable(async (
             }
         }
 
-        // 处理 ConductResearch 调用（异步）
         // 如果已经超过迭代次数，不再启动新的研究
         if (conductResearchCalls.length > 0 && !shouldEnd) {
-            // 启动并行研究代理
             const researchPromises = conductResearchCalls.map((toolCall: any, index: number) => {
                 const groupEvent = new GroupEvent(
                     'researcher',
@@ -201,12 +187,10 @@ export const supervisorTools = traceable(async (
                     groupEvent.setParentId(supervisorGroupId);
                 }
 
-                // 初始化researcher event，开始聚合后续researcher产出的events
                 if (config?.writer) {
                     config.writer(groupEvent.setStatus('running').toJSON());
                 }
 
-                // Store group event to eventsToAdd
                 eventsToAdd.push(groupEvent.toJSON());
 
                 return (researchAgentGraph as any).invoke({
@@ -232,10 +216,8 @@ export const supervisorTools = traceable(async (
                 });
             });
 
-            // 等待所有研究完成
             const toolResults = await Promise.all(researchPromises);
 
-            // 将研究结果格式化为工具消息
             // 每个子代理在 result.compressed_research 中返回压缩的研究结果
             // 我们将此压缩的研究作为 ToolMessage 的内容写入，这允许
             // 监督器稍后通过 get_notes_from_tool_calls() 检索这些结果
@@ -244,7 +226,6 @@ export const supervisorTools = traceable(async (
                 const toolCallId = toolCall.id || '';
                 const resultContent = result.compressed_research || 'Error synthesizing research report';
                 
-                // 发送 finished 状态
                 const event = toolCallEventsMap.get(toolCallId);
                 if (event && config?.writer) {
                     event.setToolResult(resultContent);
@@ -259,12 +240,10 @@ export const supervisorTools = traceable(async (
 
             toolMessages.push(...researchToolMessages);
 
-            // 从所有研究中聚合原始笔记
             allRawNotes = toolResults
                 .map((result: any) => (result.raw_notes || []).join('\n'))
                 .filter((notes: string) => notes.length > 0);
         } else if (conductResearchCalls.length > 0 && shouldEnd) {
-            // 如果已超过迭代次数但还有 ConductResearch 调用，返回错误响应
             for (const toolCall of conductResearchCalls) {
                 const toolCallId = toolCall.id || '';
                 const resultContent = 'Research iteration limit reached. Unable to conduct further research.';
@@ -275,7 +254,6 @@ export const supervisorTools = traceable(async (
                     })
                 );
                 
-                // 发送 finished 状态
                 const event = toolCallEventsMap.get(toolCallId);
                 if (event && config?.writer) {
                     event.setToolResult(resultContent);
@@ -285,7 +263,6 @@ export const supervisorTools = traceable(async (
         }
     } catch (error) {
         console.error('Error in supervisor tools:', error);
-        // 发送 error 状态
         for (const event of toolCallEventsMap.values()) {
             if (config?.writer) {
                 config.writer(event.setStatus('error').toJSON());
@@ -294,7 +271,6 @@ export const supervisorTools = traceable(async (
         shouldEnd = true;
     }
 
-    // 具有适当状态更新的单个返回点
     if (shouldEnd) {
         // 即使要结束，也需要返回 toolMessages 以确保所有 tool_calls 都有响应
         const notes = getNotesFromToolCalls([...supervisorMessages, ...toolMessages]);
@@ -304,12 +280,10 @@ export const supervisorTools = traceable(async (
             research_brief: state.research_brief || '',
         };
 
-        // 如果有工具消息，需要追加到 supervisor_messages 中
         if (toolMessages.length > 0) {
             result.supervisor_messages = toolMessages;
         }
 
-        // Store events to state.events
         if (eventsToAdd.length > 0) {
             result.events = eventsToAdd;
         }
@@ -323,7 +297,6 @@ export const supervisorTools = traceable(async (
             raw_notes: allRawNotes,
         };
 
-        // Store events to state.events
         if (eventsToAdd.length > 0) {
             result.events = eventsToAdd;
         }

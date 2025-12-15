@@ -69,6 +69,7 @@ export class DeepResearchPageStore {
         const conversation = new Conversation(thread.id, thread.title);
 
         conversation.createdAt = thread.createdAt;
+        conversation.updatedAt = thread.updatedAt;
 
         this.conversations.push(conversation);
 

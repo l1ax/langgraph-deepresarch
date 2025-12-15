@@ -1,49 +1,37 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// @ts-expect-error
-import Typewriter from 'typewriter-effect/dist/core';
-
-const TYPEWRITER_STRINGS = [
-  "请深入调研 2024-2025 年全球‘具身智能 (Embodied AI)’ 领域的商业化落地现状，分析主要的技术瓶颈，并梳理出目前获得融资最多的前 5 家初创公司的核心竞争力。",
-  "请撰写一份关于‘固态电池’技术在消费电子领域应用的调研报告。总结过去 12 个月内的突破性学术进展，列出主要的技术路线之争，并预估大规模量产的时间节点。",
-  "全方位对比特斯拉 (Tesla) 与比亚迪 (BYD) 在全球供应链布局上的差异。重点分析双方在电池原材料控制、制造通过率以及地缘政治风险应对上的优劣势。"
-];
 
 interface ConversationComposerProps {
   variant?: 'chat' | 'landing';
   value: string;
   placeholder?: string;
-  typewriterOptions?: {
-    enable: boolean;
-    strings?: string[];
-    delay?: number;
-    loop?: boolean;
-    autoStart?: boolean;
-  }
+  useTypewriter?: boolean;
+  typewriterStrings?: string[];
   onChange: (value: string) => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: React.FormEvent) => void;
   isLoading: boolean;
   canSubmit: boolean;
   inputRef?: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   className?: string;
 }
 
+const DEFAULT_TYPEWRITER_STRINGS = [
+  "分析下英伟达最新财报的亮点与风险...",
+  "对比特斯拉与比亚迪供应链的差异...",
+  "研究具身智能的商业化现状...",
+  "预测量子计算在金融领域的应用...",
+];
+
 export const ConversationComposer: React.FC<ConversationComposerProps> = ({
   variant = 'chat',
   value,
-  placeholder = "",
-  typewriterOptions = {
-    enable: true,
-    strings: TYPEWRITER_STRINGS,
-    delay: 100,
-    loop: true,
-    autoStart: true,
-  },
+  placeholder = "问点什么...",
+  useTypewriter = false,
+  typewriterStrings = DEFAULT_TYPEWRITER_STRINGS,
   onChange,
   onSubmit,
   isLoading,
@@ -52,88 +40,138 @@ export const ConversationComposer: React.FC<ConversationComposerProps> = ({
   className,
 }) => {
   const isLanding = variant === 'landing';
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   
-  const setTextareaRef = (node: HTMLTextAreaElement | null) => {
-    if (inputRef) {
-      inputRef.current = node;
-    }
-  };
+  // Typewriter state
+  const [displayPlaceholder, setDisplayPlaceholder] = useState('');
+  const [stringIndex, setStringIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   
-  const setInputRef = (node: HTMLInputElement | null) => {
-    if (inputRef) {
-      inputRef.current = node;
-    }
-  };
-
-  const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-
+  // Typewriter effect
   useEffect(() => {
-    if (!typewriterOptions.enable) return;
+    if (!useTypewriter || typewriterStrings.length === 0) {
+      setDisplayPlaceholder(placeholder);
+      return;
+    }
 
-    const typeWriter = new Typewriter(null, {
-      strings: typewriterOptions.strings || TYPEWRITER_STRINGS,
-      autoStart: typewriterOptions.autoStart || true,
-      loop: typewriterOptions.loop || true,
-      delay: typewriterOptions.delay || 100,
-      onCreateTextNode: (character: string) => {
-        setAnimatedPlaceholder((prev) => prev + character);
-        return null;
-      },
-      onRemoveNode: () => {
-        setAnimatedPlaceholder((prev) => prev.slice(0, -1));
+    const currentString = typewriterStrings[stringIndex];
+    
+    const tick = () => {
+      if (isPaused) return;
+      
+      if (isDeleting) {
+        // Deleting characters
+        setDisplayPlaceholder(currentString.substring(0, charIndex - 1));
+        setCharIndex(prev => prev - 1);
+        
+        if (charIndex <= 1) {
+          setIsDeleting(false);
+          setStringIndex((prev) => (prev + 1) % typewriterStrings.length);
+        }
+      } else {
+        // Typing characters
+        setDisplayPlaceholder(currentString.substring(0, charIndex + 1));
+        setCharIndex(prev => prev + 1);
+        
+        if (charIndex >= currentString.length) {
+          // Pause before deleting
+          setIsPaused(true);
+          setTimeout(() => {
+            setIsPaused(false);
+            setIsDeleting(true);
+          }, 2000); // Pause for 2 seconds
+        }
       }
-    });
-
-    return () => {
-      typeWriter.stop();
     };
-  }, []);
 
-  const displayPlaceholder = animatedPlaceholder || placeholder;
+    const typingSpeed = isDeleting ? 30 : 80;
+    const timer = setTimeout(tick, typingSpeed);
+    
+    return () => clearTimeout(timer);
+  }, [useTypewriter, typewriterStrings, stringIndex, charIndex, isDeleting, isPaused, placeholder]);
+
+  // Auto-resize
+  useEffect(() => {
+    const node = textareaRef.current;
+    if (node) {
+      node.style.height = 'auto';
+      node.style.height = `${Math.min(node.scrollHeight, 200)}px`;
+    }
+  }, [value]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (canSubmit) {
+        onSubmit(e as unknown as React.FormEvent);
+      }
+    }
+  };
+
+  // Sync ref
+  useEffect(() => {
+    if (inputRef && textareaRef.current) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        inputRef.current = textareaRef.current;
+    }
+  }, [inputRef]);
+  
+  const effectivePlaceholder = useTypewriter ? displayPlaceholder : placeholder;
 
   return (
     <form
       onSubmit={onSubmit}
       className={cn(
-        isLanding
-          ? 'flex w-full flex-col gap-6 rounded-[32px] bg-card px-10 py-12 shadow-2xl border border-border/50'
-          : 'relative flex items-end gap-2 rounded-3xl border border-input bg-card p-2 shadow-sm ring-offset-background focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all',
+        'relative w-full transition-all duration-300',
+        isLanding ? 'max-w-2xl mx-auto' : 'w-full',
         className
       )}
     >
-      {isLanding ? (
-        <textarea
-          ref={setTextareaRef}
-          placeholder={displayPlaceholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={isLoading}
-          className="w-full h-[60px] resize-none border-none bg-transparent text-lg leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none"
-        />
-      ) : (
-        <Input
-          ref={setInputRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={displayPlaceholder}
-          disabled={isLoading}
-          className="flex-1 border-none bg-transparent px-4 py-3 shadow-none focus-visible:ring-0 h-[52px] text-base"
-        />
-      )}
-      <Button
-        type="submit"
-        size={isLanding ? undefined : 'icon'}
-        disabled={!canSubmit}
-        className={cn(
-          isLanding
-            ? 'self-end h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:bg-primary/90'
-            : 'h-10 w-10 rounded-full bg-primary text-primary-foreground transition-all duration-200 mb-1.5 mr-1.5 hover:bg-primary/90 hover:scale-105 shadow-sm',
-          !canSubmit && 'opacity-50 hover:scale-100 hover:shadow-none'
-        )}
-      >
-        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-        <span className="sr-only">发送</span>
-      </Button>
+      <div className={cn(
+          "relative flex items-end gap-2 w-full bg-prompter-bg border border-prompter-border overflow-hidden transition-all duration-200",
+          "focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 shadow-lg",
+          isLanding ? "rounded-3xl p-4 min-h-[120px]" : "rounded-[28px] p-2 pl-4 pr-2"
+      )}>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={effectivePlaceholder}
+            disabled={isLoading}
+            rows={1}
+            className={cn(
+                "w-full resize-none bg-transparent text-base md:text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none scrollbar-hide",
+                isLanding ? "h-full py-2" : "max-h-[200px] py-3.5"
+            )}
+            style={{ minHeight: isLanding ? '80px' : '24px' }}
+          />
+          
+          <div className="flex shrink-0 pb-1.5">
+             <Button
+                type="submit"
+                size="icon"
+                disabled={!canSubmit && !isLoading}
+                className={cn(
+                  "h-10 w-10 rounded-full transition-all duration-200",
+                  canSubmit 
+                     ? "bg-foreground text-background hover:bg-foreground/90 hover:scale-105" 
+                     : "bg-muted text-muted-foreground cursor-not-allowed opacity-50",
+                  isLoading && "opacity-100 bg-muted cursor-wait"
+                )}
+             >
+                {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-foreground" />
+                ) : (
+                    <ArrowUp className="h-5 w-5" />
+                )}
+                <span className="sr-only">发送</span>
+             </Button>
+          </div>
+      </div>
     </form>
   );
 };

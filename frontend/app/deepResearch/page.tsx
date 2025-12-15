@@ -34,43 +34,19 @@ EventRendererRegistry.register<GroupEvent.IData>('group', GroupEventRenderer);
 
 /** 会话加载时的骨架屏 */
 const ConversationSkeleton = () => (
-  <div className="mx-auto max-w-3xl space-y-8 pb-24 animate-in fade-in duration-500">
-    {/* 模拟用户提问 */}
+  <div className="mx-auto max-w-[800px] space-y-8 pb-24 animate-in fade-in duration-500">
     <div className="flex w-full gap-4 justify-end pl-12">
-      <Skeleton className="h-[72px] w-[60%] rounded-2xl rounded-tr-sm" />
-      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+      <Skeleton className="h-[72px] w-[60%] rounded-2xl rounded-tr-sm bg-muted/40" />
+      <Skeleton className="h-8 w-8 rounded-full shrink-0 bg-muted/40" />
     </div>
-
-    {/* 模拟 AI 回答 - 思考过程 */}
     <div className="flex w-full gap-4 justify-start pr-12">
-      <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+      <Skeleton className="h-8 w-8 rounded-full shrink-0 bg-muted/40" />
       <div className="flex-1 space-y-4">
-        <div className="space-y-3">
-          {/* 树状视图骨架 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-             <div className="ml-6 space-y-2 border-l-2 border-muted/50 pl-4">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-3 w-3 rounded" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-3 w-3 rounded" />
-                  <Skeleton className="h-3 w-40" />
-                </div>
-             </div>
-          </div>
-        </div>
-        
-        {/* 内容骨架 */}
-        <div className="space-y-2 pt-2">
-           <Skeleton className="h-4 w-full" />
-           <Skeleton className="h-4 w-[90%]" />
-           <Skeleton className="h-4 w-[95%]" />
-        </div>
+         <div className="space-y-2 pt-2">
+            <Skeleton className="h-4 w-full bg-muted/40" />
+            <Skeleton className="h-4 w-[90%] bg-muted/40" />
+            <Skeleton className="h-4 w-[95%] bg-muted/40" />
+         </div>
       </div>
     </div>
   </div>
@@ -78,29 +54,28 @@ const ConversationSkeleton = () => (
 
 /** 用户消息元素渲染组件 */
 const UserElementRenderer = observer<{ element: Conversation.UserElement }>(({ element }) => (
-  <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-end pl-12">
-    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm max-w-full overflow-hidden bg-primary text-primary-foreground rounded-tr-sm">
+  <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-end pl-0 md:pl-12 group">
+    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed max-w-full overflow-hidden bg-muted/50 text-foreground rounded-tr-sm">
       <div className="whitespace-pre-wrap break-words">{element.content}</div>
     </div>
-    <Avatar className="h-8 w-8 border shrink-0">
+    <Avatar className="h-8 w-8 shrink-0 mt-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
       {userStore.currentUser?.avatarUrl && <AvatarImage src={userStore.currentUser.avatarUrl} />}
-      <AvatarFallback className="bg-muted">
+      <AvatarFallback className="bg-muted text-muted-foreground">
         <User className="h-4 w-4" />
       </AvatarFallback>
     </Avatar>
   </div>
 ));
 
-/** 助手元素渲染组件 - 渲染包含 ExecutionResponse 的 assistant element */
+/** Assistant Message Renderer */
 const AssistantElementRenderer = observer<{ element: Conversation.AssistantElement }>(({ element }) => {
   const { executionResponse } = element;
-  
   return (
-    <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
-      <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
-        <AvatarFallback className="bg-primary/5 text-primary">
-          <Bot className="h-4 w-4" />
-        </AvatarFallback>
+    <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-0 md:pr-12">
+      <Avatar className="h-8 w-8 shrink-0 mt-1 gradient-border p-[1px] bg-transparent">
+         <div className="h-full w-full rounded-full bg-background flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-primary" />
+         </div>
       </Avatar>
       <div className="flex-1 space-y-3 min-w-0">
         {executionResponse.treeView.topLevelEventNodes.length > 0 ? (
@@ -111,41 +86,64 @@ const AssistantElementRenderer = observer<{ element: Conversation.AssistantEleme
   );
 });
 
-/** Loading 指示器组件 */
+/** Loading Indicator */
 const LoadingIndicator = observer(() => (
   <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-12">
-    <Avatar className="h-8 w-8 border bg-background shadow-sm shrink-0">
-      <AvatarFallback className="bg-primary/5 text-primary">
-        <Bot className="h-4 w-4" />
-      </AvatarFallback>
-    </Avatar>
-    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm bg-background border text-foreground rounded-tl-sm">
-      <div className="flex items-center gap-1 h-5">
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]"></span>
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]"></span>
-        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]"></span>
-      </div>
+     <div className="h-8 w-8 flex items-center justify-center shrink-0">
+        <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+     </div>
+    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed bg-transparent text-foreground">
+       <span className="text-muted-foreground italic">思考中...</span>
     </div>
   </div>
 ));
 
-/** 登录提示组件 */
-const LoginPrompt = observer<{ store: DeepResearchPageStore }>(({ store }) => {
+/** Welcome Screen / Landing */
+const LandingEvent = observer<{ store: DeepResearchPageStore; onSuggestion: (p: string) => void }>(({ store, onSuggestion }) => {
+  const isAuthenticated = userStore.isAuthenticated;
+
+  // New Gradient Hello
+  const helloGradient = "bg-gradient-to-r from-[#4285F4] via-[#9B72CB] to-[#D96570] text-transparent bg-clip-text";
+
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 py-12">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-        <Sparkles className="h-10 w-10 text-primary" />
-      </div>
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-semibold text-foreground">欢迎使用 DeepResearch</h2>
-        <p className="text-muted-foreground max-w-md">
-          登录后即可开始深度研究之旅。
-          <br />
-          您的对话历史将被安全保存。
-        </p>
-      </div>
-      <LoginForm store={store} />
-    </div>
+     <div className="flex h-full w-full flex-col items-center justify-center px-4 -mt-20">
+         <div className="w-full max-w-3xl space-y-12 text-center">
+            <div className="space-y-4">
+              <h1 className={cn("text-5xl md:text-6xl font-medium tracking-tight px-4 pb-2", helloGradient)}>
+                你好, {isAuthenticated ? (userStore.currentUser?.name?.split(' ')[0] || '的朋友') : '访客'}
+              </h1>
+              <h2 className="text-3xl md:text-4xl text-muted-foreground font-light px-4">
+                今天想研究点什么？
+              </h2>
+            </div>
+            
+            {!isAuthenticated ? (
+               <div className="max-w-sm mx-auto p-6 rounded-2xl bg-card border border-border/50 shadow-xl">
+                 <LoginForm store={store} />
+               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                 {[
+                    { text: '对比特斯拉与比亚迪的供应链差异', icon: '🏭' },
+                    { text: '分析英伟达最新财报亮点与风险', icon: '📈' },
+                    { text: '具身智能 (Embodied AI) 商业化现状', icon: '🤖' },
+                    { text: '2030年量子计算的发展预测', icon: '⚛️' }
+                 ].map((item) => (
+                    <button
+                      key={item.text}
+                      onClick={() => onSuggestion(item.text)}
+                      className="group flex flex-col items-start p-6 h-32 rounded-2xl bg-white hover:bg-[#eaeaea]/60 transition-all border border-transparent hover:border-border/50 text-left cursor-pointer"
+                    >
+                       <span className="text-2xl mb-auto">{item.icon}</span>
+                       <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground">
+                         {item.text}
+                       </span>
+                    </button>
+                 ))}
+              </div>
+            )}
+         </div>
+     </div>
   );
 });
 
@@ -156,7 +154,6 @@ const DeepResearchPageContent = observer(() => {
   const store = useMemo(() => new DeepResearchPageStore(), []);
   const { showAlert } = useAlert();
 
-  // Initialize client and auth
   useEffect(() => {
     const init = async () => {
       try {
@@ -166,14 +163,9 @@ const DeepResearchPageContent = observer(() => {
       }
     };
     init();
-    
-    // Cleanup on unmount
-    return () => {
-      store.dispose();
-    };
+    return () => store.dispose();
   }, [store, showAlert]);
 
-  // Auto-scroll to bottom when elements change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [store.elements]);
@@ -193,168 +185,100 @@ const DeepResearchPageContent = observer(() => {
 
   const handleSuggestedPrompt = (prompt: string) => {
     store.setInputValue(prompt);
-    composerInputRef.current?.focus();
+    // Use a timeout to ensure state update before focus
+    setTimeout(() => {
+      composerInputRef.current?.focus();
+    }, 50);
   };
 
-  // 判断是否显示 loading：正在加载且最后一个元素是用户消息
   const lastElement = store.elements[store.elements.length - 1];
   const showLoading = store.isLoading && lastElement && Conversation.isUserElement(lastElement);
   const hasConversation = Boolean(store.currentConversation);
-  const isAuthenticated = userStore.isAuthenticated;
   
-  // 判断是否正在切换会话加载历史记录
-  const isHistoryLoading = store.isHistoryLoading;
-
   return (
-    <div className="flex h-screen w-full min-h-0 bg-background text-foreground font-sans selection:bg-primary/20">
-      {/* Alert 通知 */}
+    <div 
+      className="flex h-screen w-full min-h-0 text-foreground font-sans overflow-hidden transition-colors duration-500"
+      style={{ backgroundColor: hasConversation ? '#ffffff' : '#f0f4f8' }}
+    >
       <AlertContainer />
-      
-      {/* Sidebar */}
       <ConversationSidebar store={store} />
 
-      {/* Main Content */}
-      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between bg-background/80 px-6 backdrop-blur-xl border-b border-border/50">
-          <div className="flex items-center gap-3">
-            {/* Sidebar Toggle Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => store.toggleSidebar()}
-              className="h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <h1 className="text-lg font-semibold tracking-tight">DeepResearch</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground hidden md:block">
-              Powered by LangGraph
-            </span>
-            <AuthButton store={store} />
-          </div>
+      {/* Main Content Area - Flex Column Layout */}
+      <div className="flex flex-1 min-h-0 flex-col">
+        
+        {/* Header - Static */}
+        <header className="h-16 flex-none flex items-center justify-between px-6 z-10">
+           <div>
+             {!store.isSidebarOpen && (
+               <Button variant="ghost" size="icon" onClick={() => store.toggleSidebar()} className="text-muted-foreground hover:text-foreground">
+                  <Menu className="h-5 w-5" />
+               </Button>
+             )}
+           </div>
+           <div>
+              <AuthButton store={store} />
+           </div>
         </header>
 
-        {/* Chat Area */}
-        <div
-          className={cn(
-            'flex-1 min-h-0 overflow-hidden relative transition-colors duration-200',
-            hasConversation ? 'bg-background' : 'bg-muted/30'
-          )}
-        >
-          {hasConversation ? (
-            <div className="flex h-full min-h-0 flex-col">
-              <div className="flex-1 min-h-0">
-                <ScrollArea className="h-full p-4 md:p-8" ref={scrollAreaRef}>
-                   {isHistoryLoading ? (
-                      <ConversationSkeleton />
-                   ) : (
-                      <div className="mx-auto max-w-3xl space-y-8 pb-24">
-                        {/* 按照 elements 的顺序渲染所有元素 */}
-                        {store.elements.map((element) => {
-                          if (Conversation.isUserElement(element)) {
-                            return <UserElementRenderer key={element.id} element={element} />;
-                          } else if (Conversation.isAssistantElement(element)) {
-                            return <AssistantElementRenderer key={element.id} element={element} />;
-                          }
-                          return null;
-                        })}
+        {/* Content - Flexible */}
+        <div className="flex-1 overflow-hidden relative flex flex-col items-center">
+           {!hasConversation ? (
+              <LandingEvent store={store} onSuggestion={handleSuggestedPrompt} />
+           ) : (
+             <ScrollArea className="w-full h-full" ref={scrollAreaRef}>
+                 <div className="flex flex-col items-center w-full min-h-full py-8">
+                     <div className="w-full max-w-[800px] px-4 space-y-10">
+                        {store.isHistoryLoading ? (
+                           <ConversationSkeleton />
+                        ) : (
+                          <>
+                            {store.elements.map((element) => {
+                              if (Conversation.isUserElement(element)) {
+                                return <UserElementRenderer key={element.id} element={element} />;
+                              } else if (Conversation.isAssistantElement(element)) {
+                                return <AssistantElementRenderer key={element.id} element={element} />;
+                              }
+                              return null;
+                            })}
+                            {showLoading && <LoadingIndicator />}
+                            <div ref={messagesEndRef} className="h-4" />
+                          </>
+                        )}
+                     </div>
+                 </div>
+             </ScrollArea>
+           )}
+        </div>
 
-                        {/* Loading 指示器 */}
-                        {showLoading && <LoadingIndicator />}
+        {/* Input Area - Static Footer */}
+        <div className="flex-none w-full flex justify-center pb-8 px-4 pt-4 bg-transparent">
+           <div className="w-full max-w-[800px]">
+              <ConversationComposer
+                 variant={hasConversation ? "chat" : "landing"}
+                 value={store.inputValue}
+                 onChange={(value) => store.setInputValue(value)}
+                 onSubmit={handleSubmit}
+                 isLoading={store.isLoading}
+                 canSubmit={store.canSubmit}
+                 inputRef={composerInputRef}
+                 useTypewriter={!!userStore.currentUser && !hasConversation}
+                 placeholder={userStore.currentUser ? '深入研究...' : '请登录后开始研究'}
+              />
+              <div className="mt-2 text-center text-xs text-muted-foreground/60">
+                 DeepResearch 可能会犯错。请核查重要信息。
+              </div>
+           </div>
+        </div>
 
-                        <div ref={messagesEndRef} />
-                      </div>
-                   )}
-                </ScrollArea>
-              </div>
-              <div className="border-t border-border/50 bg-background p-4 md:p-6">
-                <div className="mx-auto max-w-3xl">
-                  <ConversationComposer
-                    variant="chat"
-                    value={store.inputValue}
-                    typewriterOptions={{
-                      enable: false
-                    }}
-                    placeholder="Ask anything"
-                    onChange={(value) => store.setInputValue(value)}
-                    onSubmit={handleSubmit}
-                    isLoading={store.isLoading}
-                    canSubmit={store.canSubmit}
-                    inputRef={composerInputRef}
-                  />
-                  <div className="mt-3 text-center text-xs text-muted-foreground">
-                    DeepResearch 可以帮助您进行深度话题研究，可能需要一些时间来生成报告。
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center px-4 py-10">
-              <div className="w-full max-w-4xl space-y-6">
-                {!isAuthenticated ? (
-                  // 未登录状态：显示登录提示
-                  <LoginPrompt store={store} />
-                ) : (
-                  // 已登录状态：显示输入框和推荐提示
-                  <>
-                    <ConversationComposer
-                      variant="landing"
-                      value={store.inputValue}
-                      onChange={(value) => store.setInputValue(value)}
-                      onSubmit={handleSubmit}
-                      isLoading={store.isLoading || store.isCreatingConversation}
-                      canSubmit={store.canSubmit && !store.isCreatingConversation}
-                      inputRef={composerInputRef}
-                    />
-                    {store.isCreatingConversation && (
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary" />
-                        <span>正在创建对话...</span>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-3 justify-center">
-                      {[
-                        '深度对比特斯拉与比亚迪的供应链',
-                        '分析英伟达最新财报的亮点与风险',
-                        '调研全球具身智能领域的商业化',
-                        '探索百度在2026年倒闭的可能性'
-                      ].map((prompt) => (
-                        <Button
-                          key={prompt}
-                          variant="ghost"
-                          className="rounded-full bg-card px-6 py-2 text-sm text-muted-foreground shadow-sm hover:bg-primary/5 hover:text-primary hover:shadow-md border border-border/50 transition-all"
-                          onClick={() => handleSuggestedPrompt(prompt)}
-                          disabled={store.isCreatingConversation}
-                        >
-                          {prompt}
-                        </Button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-       </div>
       </div>
     </div>
   );
 });
 
-const DeepResearchPage = () => {
-  return (
-    <AlertProvider>
-      <DeepResearchPageContent />
-    </AlertProvider>
-  );
-};
+const DeepResearchPage = () => (
+  <AlertProvider>
+    <DeepResearchPageContent />
+  </AlertProvider>
+);
 
 export default DeepResearchPage;

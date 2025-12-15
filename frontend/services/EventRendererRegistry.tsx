@@ -11,6 +11,10 @@ export interface EventRendererProps<T = unknown> {
   roleName: BaseEvent.RoleName;
   /** 自定义类名 */
   className?: string;
+  /** 子节点 (用于 GroupEvent) */
+  children?: React.ReactNode;
+  /** 子节点数量 (用于 GroupEvent) */
+  childCount?: number;
 }
 
 /** 事件渲染器组件类型 */

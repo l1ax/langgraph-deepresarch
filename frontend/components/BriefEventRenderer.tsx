@@ -77,7 +77,7 @@ export const BriefEventRenderer = observer(
                   ? '准备中...'
                   : '生成中...'
                 : isError
-                  ? 'Error'
+                  ? '错误'
                   : 'Research Brief'}
             </p>
           </div>

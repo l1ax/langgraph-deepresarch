@@ -57,6 +57,9 @@ export class Conversation {
   @observable
   createdAt: string = new Date().toISOString();
 
+  @observable
+  updatedAt: string = new Date().toISOString();
+
   client: Client = new Client({ apiUrl: LANGGRAPH_API_URL });
 
   threadState: ThreadState<{events: Array<BaseEvent.IEventData>}> | null = null;

@@ -27,12 +27,12 @@ import { LoginForm } from '@/components/LoginForm';
 import { flowResult } from 'mobx';
 
 // 按 subType 注册渲染器
-EventRendererRegistry.register<ClarifyEvent.IData>('clarify', ClarifyEventRenderer);
-EventRendererRegistry.register<BriefEvent.IData>('brief', BriefEventRenderer);
-EventRendererRegistry.register<ChatEvent.IData>('chat', ChatEventRenderer);
-EventRendererRegistry.register<ToolCallEvent.IData>('tool_call', ToolCallEventRenderer);
-EventRendererRegistry.register<GroupEvent.IData>('group', GroupEventRenderer);
-
+EventRendererRegistry.register<ClarifyEvent>('clarify', ClarifyEventRenderer);
+EventRendererRegistry.register<BriefEvent>('brief', BriefEventRenderer);
+EventRendererRegistry.register<ChatEvent>('chat', ChatEventRenderer);
+EventRendererRegistry.register<ChatEvent>('report_generation', ChatEventRenderer);
+EventRendererRegistry.register<ToolCallEvent>('tool_call', ToolCallEventRenderer);
+EventRendererRegistry.register<GroupEvent>('group', GroupEventRenderer);
 /** 会话加载时的骨架屏 */
 const ConversationSkeleton = () => (
   <div className="mx-auto max-w-[800px] space-y-8 pb-24 animate-in fade-in duration-500">

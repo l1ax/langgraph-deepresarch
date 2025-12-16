@@ -39,9 +39,7 @@ const EventNodeRenderer = observer<{
 
       return (
         <GroupEventRenderer
-          data={{}}
-          status={event.status}
-          roleName={event.roleName}
+          event={event}
           childCount={children.length}
         >
           {renderedChildren}

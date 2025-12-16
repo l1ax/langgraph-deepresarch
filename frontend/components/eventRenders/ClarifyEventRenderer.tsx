@@ -17,9 +17,10 @@ import {Streamdown} from 'streamdown';
  * - 如果 need_clarification 为 false，显示验证信息提示
  */
 export const ClarifyEventRenderer = observer(
-  ({ data, status, roleName: _roleName, className }: EventRendererProps<ClarifyEvent.IData>) => {
+  ({ event, className }: EventRendererProps<ClarifyEvent>) => {
+    const status = event.status;
     // 解析可能不完整的JSON字符串
-    const parsedData = parseIncompleteJson<ClarifyEvent.IData>(data as ClarifyEvent.IData | string);
+    const parsedData = parseIncompleteJson<ClarifyEvent.IData>(event.content.data as ClarifyEvent.IData | string);
     const { need_clarification, question, verification } = parsedData;
 
     const isPending = status === 'pending';

@@ -13,8 +13,10 @@ import { Streamdown } from 'streamdown';
  * 用于渲染聊天消息（包括流式生成的最终报告等）
  */
 export const ChatEventRenderer = observer(
-  ({ data, status, roleName, className }: EventRendererProps<ChatEvent.IData>) => {
-    const { message } = data;
+  ({ event, className }: EventRendererProps<ChatEvent>) => {
+    const { message } = event.content.data;
+    const status = event.status;
+    const subType = event.subType;
 
     const isPending = status === 'pending';
     const isRunning = status === 'running';
@@ -30,7 +32,8 @@ export const ChatEventRenderer = observer(
       return '最终报告';
     };
 
-    const isFinalReportGeneration = message.length > 0;
+    // 使用 subType 来判断是否为报告生成
+    const isReportGeneration = subType === 'report_generation';
 
     return (
       <div
@@ -38,15 +41,15 @@ export const ChatEventRenderer = observer(
           'relative rounded-2xl px-6 py-4 text-sm leading-relaxed shadow-sm max-w-full overflow-hidden transition-all duration-300',
           isError
             ? 'bg-destructive/5 border border-destructive/20 text-destructive'
-            : isFinalReportGeneration
+            : isReportGeneration
               ? 'bg-card border border-primary/20 ring-1 ring-primary/5 shadow-md'
               : 'bg-card border border-border/50 text-foreground',
           'rounded-tl-sm',
           className
         )}
       >
-        {/* 最终报告生成时显示标题栏 */}
-        {isFinalReportGeneration && (
+        {/* 报告生成时显示标题栏 */}
+        {isReportGeneration && (
           <div className={cn(
             "flex items-center gap-3 mb-4 pb-4 border-b",
             isError ? "border-destructive/10" : "border-border/50"

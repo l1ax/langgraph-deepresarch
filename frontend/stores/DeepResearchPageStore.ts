@@ -229,8 +229,13 @@ export class DeepResearchPageStore {
   private addErrorMessage(content: string) {
     if (this.currentConversation) {
       const errorEvent = ChatEvent.create(
-        `error-${Date.now()}`,
-        content
+        {
+          id: `error-${Date.now()}`,
+          message: content,
+          subType: 'chat',
+          roleName: 'ai',
+          status: 'error',
+        }
       );
       // 创建包含错误事件的 ExecutionResponse
       const executionResponse = new ExecutionResponse();

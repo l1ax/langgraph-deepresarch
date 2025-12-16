@@ -1,7 +1,15 @@
 import {BaseNode} from './BaseNode';
 import {Node} from '@xyflow/react';
+import { v5 as uuidv5 } from 'uuid';
 
 export class BriefGenerationNode extends BaseNode<BriefGenerationNode.IData> {
+    static createNew(): BriefGenerationNode {
+        const node = new BriefGenerationNode();
+        const id = uuidv5(node.type, BaseNode.NODE_ID_NAMESPACE);
+        node.id = id;
+        return node;
+    }
+
     data: BriefGenerationNode.IData = {
         research_brief: '',
         research_brief_reasoning: '',

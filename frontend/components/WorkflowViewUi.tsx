@@ -19,13 +19,13 @@ const defaultEdgeOptions = {
 export const WorkflowViewUi: React.FC<IProps> = observer(props => {
     const {store} = props;
 
-    console.log(store.reactFlowEdges);
+    console.log(store.graph.reactFlowNodes);
 
     return (
         <div className="w-full h-full bg-background">
             <ReactFlow
-                nodes={store.reactFlowNodes}
-                edges={store.reactFlowEdges}
+                nodes={store.graph.reactFlowNodes}
+                edges={store.graph.reactFlowEdges}
                 nodeTypes={nodeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 connectionLineType={ConnectionLineType.SmoothStep}

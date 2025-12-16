@@ -1,8 +1,16 @@
 import {observable} from 'mobx';
 import {BaseNode} from './BaseNode';
 import {Node} from '@xyflow/react';
+import { v5 as uuidv5 } from 'uuid';
 
 export class ClarifyWithUserNode extends BaseNode<ClarifyWithUserNode.IData> {
+    static createNew(): ClarifyWithUserNode {
+        const node = new ClarifyWithUserNode();
+        const id = uuidv5(node.type, BaseNode.NODE_ID_NAMESPACE);
+        node.id = id;
+        return node;
+    }
+
     @observable
     data: ClarifyWithUserNode.IData = {
         need_clarification: false,

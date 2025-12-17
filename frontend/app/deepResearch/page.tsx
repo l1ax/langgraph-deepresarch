@@ -270,25 +270,28 @@ const DeepResearchPageContent = observer(() => {
           {/* Workflow View Panel */}
           {hasConversation && (
             <div className={cn(
-              "h-full border-l border-border/50 bg-muted/20 flex flex-col overflow-hidden transition-all duration-300",
-              store.isWorkflowViewOpen ? "w-[450px] opacity-100" : "w-0 opacity-0 border-l-0"
+              "h-full border-l border-border/50 flex flex-col overflow-hidden transition-all duration-300 relative z-20 shadow-[-5px_0_30px_-10px_rgba(0,0,0,0.05)]",
+              store.isWorkflowViewOpen ? "w-[650px] opacity-100" : "w-0 opacity-0 border-l-0"
             )}>
               {store.isWorkflowViewOpen && (
                 <>
                   {/* Panel Header */}
-                  <div className="h-12 flex-none flex items-center justify-between px-4 border-b border-border/50 bg-background/80">
-                    <span className="text-sm font-medium text-foreground">执行视图</span>
+                  <div className="h-14 flex-none flex items-center justify-between px-5 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-border/40 z-10">
+                    <div className="flex items-center gap-2">
+                        <GitBranch className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold text-foreground tracking-tight">执行视图</span>
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"
                       onClick={() => store.toggleWorkflowView()}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                   {/* ReactFlow Container */}
-                  <div className="flex-1 min-h-0">
+                  <div className="flex-1 min-h-0 relative">
                     {store.elements.length > 0 && Conversation.isAssistantElement(store.elements[store.elements.length - 1]) && (
                       <WorkflowViewUi store={(store.elements[store.elements.length - 1] as Conversation.AssistantElement).executionResponse.WorkflowView} />
                     )}

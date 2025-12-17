@@ -1,6 +1,6 @@
 import {observer} from 'mobx-react-lite';
 import {Handle, Position, NodeProps} from '@xyflow/react';
-import {MessageSquare, FileText} from 'lucide-react';
+import {MessageSquare, FileText, Loader2, CheckCircle2, AlertCircle} from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {BaseNode} from '@/stores/nodes';
 
@@ -14,16 +14,16 @@ const getSubTypeConfig = (subType: string = 'chat') => {
     switch (subType) {
         case 'report_generation':
             return {
-                title: '报告生成',
+                title: 'Report Generation',
                 Icon: FileText,
-                color: 'amber',
+                theme: 'amber',
             };
         case 'chat':
         default:
             return {
-                title: 'LLM',
+                title: 'LLM Worker',
                 Icon: MessageSquare,
-                color: 'blue',
+                theme: 'blue',
             };
     }
 };
@@ -34,96 +34,100 @@ export const BasicOutputNodeUi = observer((props: NodeProps) => {
     const subType = data?.subType ?? 'chat';
     
     const config = getSubTypeConfig(subType);
-    const Icon = config.Icon;
+    let Icon = config.Icon;
     const label = data?.label || config.title;
 
-    const colorStyles = {
-        amber: {
-            pending: {
-                container: 'border-amber-200 bg-amber-50/80',
-                icon: 'bg-amber-100 text-amber-500',
-                text: 'text-amber-700',
-                handle: '!bg-amber-400',
-            },
-            running: {
-                container: 'border-amber-400 bg-amber-50',
-                icon: 'bg-amber-200 text-amber-600 animate-pulse',
-                text: 'text-amber-800',
-                handle: '!bg-amber-500',
-            },
-            finished: {
-                container: 'border-green-300 bg-green-50/80',
-                icon: 'bg-green-100 text-green-600',
-                text: 'text-green-700',
-                handle: '!bg-green-400',
-            },
-            error: {
-                container: 'border-red-300 bg-red-50/80',
-                icon: 'bg-red-100 text-red-600',
-                text: 'text-red-700',
-                handle: '!bg-red-400',
-            },
+    // Status-based styles
+    const statusStyles = {
+        pending: {
+            container: 'border-slate-200 bg-white/60 shadow-sm opacity-80',
+            icon: 'text-slate-400 bg-slate-100',
+            text: 'text-slate-500',
+            ring: '',
         },
-        blue: {
-            pending: {
-                container: 'border-blue-200 bg-blue-50/80',
-                icon: 'bg-blue-100 text-blue-500',
-                text: 'text-blue-700',
-                handle: '!bg-blue-400',
-            },
-            running: {
-                container: 'border-blue-400 bg-blue-50',
-                icon: 'bg-blue-200 text-blue-600 animate-pulse',
-                text: 'text-blue-800',
-                handle: '!bg-blue-500',
-            },
-            finished: {
-                container: 'border-green-300 bg-green-50/80',
-                icon: 'bg-green-100 text-green-600',
-                text: 'text-green-700',
-                handle: '!bg-green-400',
-            },
-            error: {
-                container: 'border-red-300 bg-red-50/80',
-                icon: 'bg-red-100 text-red-600',
-                text: 'text-red-700',
-                handle: '!bg-red-400',
-            },
+        running: {
+            container: 'border-blue-400/50 bg-white/90 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]',
+            icon: 'text-blue-600 bg-blue-50',
+            text: 'text-slate-700',
+            ring: 'ring-2 ring-blue-500/20 animate-pulse',
+        },
+        finished: {
+            container: 'border-emerald-500/30 bg-white/90 shadow-md',
+            icon: 'text-emerald-600 bg-emerald-50',
+            text: 'text-slate-800',
+            ring: '',
+        },
+        error: {
+            container: 'border-rose-400/50 bg-white/90 shadow-sm',
+            icon: 'text-rose-600 bg-rose-50',
+            text: 'text-slate-800',
+            ring: 'ring-2 ring-rose-500/20',
         },
     };
 
-    const styles = colorStyles[config.color as keyof typeof colorStyles][status];
+    let currentStyle = statusStyles.pending;
+    if (status === 'running') {
+        currentStyle = statusStyles.running;
+    } else if (status === 'finished') {
+        currentStyle = statusStyles.finished;
+    } else if (status === 'error') {
+        currentStyle = statusStyles.error;
+    }
+
+    const isRunning = status === 'running';
 
     return (
         <div 
             className={cn(
-                "relative rounded-xl border-2 shadow-md transition-all duration-300 px-4 py-3 min-w-[120px]",
-                styles.container
+                "relative group rounded-2xl border transition-all duration-500 ease-out backdrop-blur-sm px-4 py-3 min-w-[140px]",
+                currentStyle.container,
+                currentStyle.ring
             )}
         >
-            {/* 顶部入口连接点 */}
+            {/* Top Handle */}
             <Handle 
                 type="target" 
                 position={Position.Top} 
-                className={cn("!w-3 !h-3 !border-2 !border-white !shadow-sm", styles.handle)}
+                className={cn(
+                    "!w-2.5 !h-2.5 !border-[2px] !border-white !bg-slate-400 transition-colors duration-300",
+                    status === 'running' && "!bg-blue-500",
+                    status === 'finished' && "!bg-emerald-500",
+                    "group-hover:scale-125"
+                )}
             />
             
-            {/* 节点内容 */}
-            <div className="flex items-center gap-2">
+            {/* Content */}
+            <div className="flex items-center gap-3">
                 <div className={cn(
-                    "p-1.5 rounded-lg",
-                    styles.icon
+                    "p-2 rounded-xl transition-colors duration-300 flex items-center justify-center",
+                    currentStyle.icon
                 )}>
-                    <Icon className="h-4 w-4" />
+                    {isRunning ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Icon className="h-4 w-4" />
+                    )}
                 </div>
-                <span className={cn("text-sm font-semibold", styles.text)}>{label}</span>
+                <div className="flex flex-col justify-center">
+                    <span className={cn("text-xs font-bold leading-none mb-0.5", currentStyle.text)}>
+                        {label}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                        {status}
+                    </span>
+                </div>
             </div>
 
-            {/* 底部出口连接点 */}
+            {/* Bottom Handle */}
             <Handle 
                 type="source" 
                 position={Position.Bottom} 
-                className={cn("!w-3 !h-3 !border-2 !border-white !shadow-sm", styles.handle)}
+                className={cn(
+                    "!w-2.5 !h-2.5 !border-[2px] !border-white !bg-slate-400 transition-colors duration-300",
+                    status === 'running' && "!bg-blue-500",
+                    status === 'finished' && "!bg-emerald-500",
+                    "group-hover:scale-125"
+                )}
             />
         </div>
     );

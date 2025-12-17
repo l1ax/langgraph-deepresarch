@@ -25,7 +25,8 @@ export class UserNode extends BaseNode<UserNode.IData> {
                 type: 'User',
                 status: this.status,
             },
-            type: this.type
+            type: this.type,
+
         }
     }
 }

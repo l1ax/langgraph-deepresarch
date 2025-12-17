@@ -1,6 +1,7 @@
 import { observable } from 'mobx';
+import { Edge } from '@xyflow/react';
 
-export class Edge {
+export class BaseEdge {
     /** 边唯一标识 */
     @observable
     id: string = '';
@@ -18,12 +19,21 @@ export class Edge {
         this.sourceNodeId = sourceNodeId;
         this.targetNodeId = targetNodeId;
     }
+
+    toReactFlowData(): Edge {
+        return {
+            id: this.id,
+            source: this.sourceNodeId,
+            target: this.targetNodeId,
+        };
+    }
 }
 
-export namespace Edge {
+export namespace BaseEdge {
     export interface IEdge {
         id: string;
         sourceNodeId: string;
         targetNodeId: string;
+        toReactFlowData(): Edge;
     }
 }

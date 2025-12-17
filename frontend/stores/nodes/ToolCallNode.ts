@@ -5,6 +5,7 @@
 
 import {BaseNode} from './BaseNode';
 import {Node} from '@xyflow/react';
+import {makeObservable} from 'mobx';
 import { v5 as uuidv5 } from 'uuid';
 
 export class ToolCallNode extends BaseNode<ToolCallNode.IData> {
@@ -23,6 +24,11 @@ export class ToolCallNode extends BaseNode<ToolCallNode.IData> {
     };
 
     type: BaseNode.NodeType = 'ToolCall';
+
+    constructor() {
+        super();
+        makeObservable(this);
+    }
 
     toReactFlowData(): Node {
         const hasParent = !!this.parentId;

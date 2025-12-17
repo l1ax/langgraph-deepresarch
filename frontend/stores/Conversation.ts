@@ -207,16 +207,16 @@ export class Conversation {
   @flow.bound
   *restoreChatHistoryByThreadId(threadId: string) {
     // 从数据库获取 events（Proxy 已自动持久化）
-    // let dbEvents: StoredEvent[] = [];
-    // try {
-    //   dbEvents = yield apiService.getEventsByThread(threadId);
-    // } catch (error) {
-    //   console.warn('[Conversation] Failed to fetch events from database:', error);
-    // }
+    let dbEvents: StoredEvent[] = [];
+    try {
+      dbEvents = yield apiService.getEventsByThread(threadId);
+    } catch (error) {
+      console.warn('[Conversation] Failed to fetch events from database:', error);
+    }
 
-    // // 转换数据库 events 为 IEventData 格式
-    // const events = dbEvents.map(e => this.convertStoredEventToEventData(e));
-    const events = data.map(e => this.convertStoredEventToEventData(e));
+    // 转换数据库 events 为 IEventData 格式
+    const events = dbEvents.map(e => this.convertStoredEventToEventData(e));
+    // const events = data.map(e => this.convertStoredEventToEventData(e));
 
     if (events.length > 0) {
       this.restoreFromEvents(events);

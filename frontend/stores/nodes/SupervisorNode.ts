@@ -46,6 +46,8 @@ export class SupervisorNode extends BaseNode<SupervisorNode.IData> {
             },
             type: this.type,
             parentId: this.parentId || undefined,
+            width: this.width,
+            height: this.height,
         }
     }
 

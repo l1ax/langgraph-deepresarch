@@ -36,7 +36,7 @@ export const ClarifyWithUserNodeUi = observer((props: NodeProps) => {
                 )}>
                     <MessageCircle className="h-4 w-4" />
                 </div>
-                <span className="text-sm font-medium text-foreground/80">用户澄清</span>
+                <span className="text-sm font-medium text-foreground/80">需求澄清</span>
             </div>
             <Handle 
                 type="source" 

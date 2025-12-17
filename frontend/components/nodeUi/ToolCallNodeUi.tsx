@@ -26,7 +26,7 @@ export const ToolCallNodeUi = observer((props: NodeProps) => {
         )}>
             <Handle 
                 type="target" 
-                position={Position.Top} 
+                position={Position.Left} 
                 className="!w-2 !h-2 !bg-muted-foreground/50 !border-0"
             />
             <div className="flex items-center gap-2">
@@ -42,7 +42,7 @@ export const ToolCallNodeUi = observer((props: NodeProps) => {
             </div>
             <Handle 
                 type="source" 
-                position={Position.Bottom} 
+                position={Position.Right} 
                 className="!w-2 !h-2 !bg-muted-foreground/50 !border-0"
             />
         </div>

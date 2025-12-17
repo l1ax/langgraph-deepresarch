@@ -1,5 +1,6 @@
 import {BaseNode} from './BaseNode';
 import {Node} from '@xyflow/react';
+import {makeObservable} from 'mobx';
 import { v5 as uuidv5 } from 'uuid';
 
 export class BriefGenerationNode extends BaseNode<BriefGenerationNode.IData> {
@@ -17,6 +18,11 @@ export class BriefGenerationNode extends BaseNode<BriefGenerationNode.IData> {
 
     type: BaseNode.NodeType = 'BriefGeneration';
 
+    constructor() {
+        super();
+        makeObservable(this);
+    }
+
     toReactFlowData(): Node {
         return {
             id: this.id,
@@ -28,6 +34,7 @@ export class BriefGenerationNode extends BaseNode<BriefGenerationNode.IData> {
             },
             type: this.type,
             parentId: this.parentId,
+
         }
     }
 }

@@ -1,4 +1,4 @@
-import {observable} from 'mobx';
+import {makeObservable, observable} from 'mobx';
 import {BaseNode} from './BaseNode';
 import {Node} from '@xyflow/react';
 import { v5 as uuidv5 } from 'uuid';
@@ -21,6 +21,11 @@ export class ClarifyWithUserNode extends BaseNode<ClarifyWithUserNode.IData> {
     @observable
     type: BaseNode.NodeType = 'ClarifyWithUser';
 
+    constructor() {
+        super();
+        makeObservable(this);
+    }
+
     toReactFlowData(): Node {
         return {
             id: this.id,
@@ -32,6 +37,7 @@ export class ClarifyWithUserNode extends BaseNode<ClarifyWithUserNode.IData> {
             },
             type: this.type,
             parentId: this.parentId,
+
         }
     }
 }

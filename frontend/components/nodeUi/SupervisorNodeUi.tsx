@@ -7,18 +7,15 @@ import {BaseNode} from '@/stores/nodes';
 interface SupervisorNodeData {
     status?: BaseNode.NodeStatus;
     label?: string;
-    childCount?: number;
 }
 
 export const SupervisorNodeUi = observer((props: NodeProps) => {
     const data = props.data as SupervisorNodeData;
     const status = data?.status ?? 'pending';
     const label = data?.label || '研究主管';
-    const childCount = data?.childCount ?? 0;
 
-    // 根据子节点数量计算容器尺寸
-    const minWidth = 100 + childCount * 120;
-    const minHeight = childCount > 0 ? 120 : 80;
+    // 从 NodeProps 获取 ReactFlow 计算的宽高
+    const { width, height } = props;
 
     const statusStyles = {
         pending: {
@@ -56,8 +53,8 @@ export const SupervisorNodeUi = observer((props: NodeProps) => {
                 styles.container
             )}
             style={{
-                minWidth: `${minWidth}px`,
-                minHeight: `${minHeight}px`,
+                width: width ? `${width}px` : 'auto',
+                height: height ? `${height}px` : 'auto',
             }}
         >
             {/* 顶部入口连接点 */}
@@ -80,18 +77,12 @@ export const SupervisorNodeUi = observer((props: NodeProps) => {
                 </div>
                 <span className={cn("text-sm font-semibold", styles.text)}>{label}</span>
                 <div className="flex-1" />
-                {childCount > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-purple-500">
-                        <Users className="h-3 w-3" />
-                        <span>{childCount} 子节点</span>
-                    </div>
-                )}
             </div>
 
             {/* 子节点区域 - ReactFlow 会自动将 parentId 指向本节点的子节点渲染在这里 */}
+            {/* 使用 min-height 而非动态 height，避免与 expandParent 产生无限循环 */}
             <div 
-                className="relative w-full bg-gradient-to-b from-transparent to-purple-50/20"
-                style={{ minHeight: childCount > 0 ? '80px' : '40px' }}
+                className="relative w-full flex-1 bg-gradient-to-b from-transparent to-purple-50/20"
             >
                 {/* 子节点由 ReactFlow 自动渲染 */}
             </div>

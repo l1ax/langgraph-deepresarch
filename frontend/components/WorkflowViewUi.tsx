@@ -1,7 +1,10 @@
+'use client';
+
 import {WorkflowViews} from '@/stores/views/workflowViews';
 import {ReactFlow, Controls, Background, BackgroundVariant, ConnectionLineType} from '@xyflow/react';
 import {observer} from 'mobx-react-lite';
 import {nodeTypes} from './nodeUi';
+import {useEffect} from 'react';
 
 interface IProps {
     store: WorkflowViews;
@@ -19,8 +22,6 @@ const defaultEdgeOptions = {
 export const WorkflowViewUi: React.FC<IProps> = observer(props => {
     const {store} = props;
 
-    console.log(store.graph.reactFlowNodes);
-
     return (
         <div className="w-full h-full bg-background">
             <ReactFlow
@@ -36,6 +37,8 @@ export const WorkflowViewUi: React.FC<IProps> = observer(props => {
                 nodesConnectable={false}
                 elementsSelectable={true}
                 panOnScroll={true}
+                onInit={(r) => store.onInit(r)}
+                onNodesChange={store.onNodesChange}
             >
                 <Controls 
                     showInteractive={false}

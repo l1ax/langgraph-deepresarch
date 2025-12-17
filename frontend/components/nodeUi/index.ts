@@ -5,6 +5,7 @@ import { UserNodeUi } from './UserNodeUi';
 import { SupervisorNodeUi } from './SupervisorNodeUi';
 import { ResearcherNodeUi } from './ResearcherNodeUi';
 import { ToolCallNodeUi } from './ToolCallNodeUi';
+import { BasicOutputNodeUi } from './BasicOutputNodeUi';
 
 export const nodeTypes: NodeTypes = {
     ClarifyWithUser: ClarifyWithUserNodeUi,
@@ -13,4 +14,5 @@ export const nodeTypes: NodeTypes = {
     Supervisor: SupervisorNodeUi,
     Researcher: ResearcherNodeUi,
     ToolCall: ToolCallNodeUi,
+    BasicOutput: BasicOutputNodeUi,
 };

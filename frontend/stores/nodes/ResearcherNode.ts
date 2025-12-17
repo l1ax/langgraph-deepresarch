@@ -1,13 +1,12 @@
 /**
  * Researcher 节点
- * 用于研究员角色的 group 事件，作为子流程的容器
+ * 用于研究员角色的 group 事件，作为普通节点展示
  */
 
-import {computed, observable} from 'mobx';
+import {makeObservable, observable} from 'mobx';
 import {BaseNode} from './BaseNode';
 import {Node} from '@xyflow/react';
 import { v5 as uuidv5 } from 'uuid';
-import {Graph} from '../graph';
 
 export class ResearcherNode extends BaseNode<ResearcherNode.IData> {
     static createNew(): ResearcherNode {
@@ -25,13 +24,9 @@ export class ResearcherNode extends BaseNode<ResearcherNode.IData> {
     @observable
     type: BaseNode.NodeType = 'Researcher';
 
-    /** researcher 从属的子图 */
-    @observable
-    graph: Graph = new Graph();
-
     constructor() {
         super();
-        this.graph.associatedNode = this;
+        makeObservable(this);
     }
 
     toReactFlowData(): Node {
@@ -42,28 +37,11 @@ export class ResearcherNode extends BaseNode<ResearcherNode.IData> {
                 ...this.data,
                 type: 'Researcher',
                 status: this.status,
-                childCount: this.childCount,
             },
             type: this.type,
             parentId: this.parentId || undefined,
+
         }
-    }
-
-    @computed
-    get subflowReactFlowNodeData(): Node[] {
-        return this.graph.nodes.map(node => (
-            {
-                extent: 'parent' as const,
-                parentId: this.id,
-                expandParent: true,
-                ...node.toReactFlowData()
-            }
-        ));
-    }
-
-    @computed
-    get childCount(): number {
-        return this.graph.nodes.length;
     }
 }
 
@@ -72,3 +50,4 @@ export namespace ResearcherNode {
         label?: string;
     }
 }
+

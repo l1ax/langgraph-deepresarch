@@ -1,4 +1,4 @@
-import {computed, observable} from 'mobx';
+import {computed, makeObservable, observable} from 'mobx';
 import {BaseEvent} from '../events';
 import {Node} from '@xyflow/react';
 import {Graph} from '../graph';
@@ -22,6 +22,12 @@ export abstract class BaseNode<T extends unknown = unknown> implements BaseNode.
     @observable
     status: BaseNode.NodeStatus = 'pending';
 
+    @observable
+    width: number = 0;
+
+    @observable
+    height: number = 0;
+
     @observable.ref
     parentNode: BaseNode<unknown> | undefined = undefined;
 
@@ -31,6 +37,10 @@ export abstract class BaseNode<T extends unknown = unknown> implements BaseNode.
     abstract data: T;
 
     abstract type: BaseNode.NodeType;
+
+    constructor() {
+        makeObservable(this);
+    }
     
     abstract toReactFlowData(): Node;
 
@@ -61,6 +71,10 @@ export namespace BaseNode {
         parentNode: BaseNode<unknown> | undefined;
         /** 从属的图 */
         associatedGraph: Graph | undefined;
+        /** 节点宽度 */
+        width: number;
+        /** 节点高度 */
+        height: number;
 
         toReactFlowData(): Node;
 
@@ -69,7 +83,7 @@ export namespace BaseNode {
     }
 
     /** 节点类型 */
-    export type NodeType = 'ClarifyWithUser' | 'BriefGeneration' | 'Supervisor' | 'Researcher' | 'ToolCall' | 'User';
+    export type NodeType = 'ClarifyWithUser' | 'BriefGeneration' | 'Supervisor' | 'Researcher' | 'ToolCall' | 'User' | 'BasicOutput';
 
     /** 节点运行状态，对齐事件状态 */
     export type NodeStatus = BaseEvent.EventStatus;

@@ -51,6 +51,20 @@
         "updatedAt": "2025-12-16T15:50:47.972Z"
     },
     {
+        "id": "2dfbaf61-2904-5f97-9665-f80650e35a09",
+        "threadId": "db9ecc06-4838-4945-8724-fea2ac6bbd4d",
+        "eventType": "/supervisor/group",
+        "status": "finished",
+        "content": {
+            "data": null,
+            "contentType": "text"
+        },
+        "parentId": null,
+        "sequence": 6,
+        "createdAt": "2025-12-16T15:50:47.972Z",
+        "updatedAt": "2025-12-16T15:55:33.517Z"
+    },
+    {
         "id": "f2c1b246-369e-5452-a844-b88c40699549",
         "threadId": "db9ecc06-4838-4945-8724-fea2ac6bbd4d",
         "eventType": "/supervisor/chat",
@@ -86,20 +100,6 @@
         "sequence": 5,
         "createdAt": "2025-12-16T15:50:57.338Z",
         "updatedAt": "2025-12-16T15:50:57.338Z"
-    },
-    {
-        "id": "2dfbaf61-2904-5f97-9665-f80650e35a09",
-        "threadId": "db9ecc06-4838-4945-8724-fea2ac6bbd4d",
-        "eventType": "/supervisor/group",
-        "status": "finished",
-        "content": {
-            "data": null,
-            "contentType": "text"
-        },
-        "parentId": null,
-        "sequence": 6,
-        "createdAt": "2025-12-16T15:50:47.972Z",
-        "updatedAt": "2025-12-16T15:55:33.517Z"
     },
     {
         "id": "b57b4e51-0b6c-506d-aee6-30a102f17b9a",

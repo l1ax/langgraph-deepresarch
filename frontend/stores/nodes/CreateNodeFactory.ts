@@ -6,9 +6,16 @@ import { UserNode } from './UserNode';
 import { SupervisorNode } from './SupervisorNode';
 import { ResearcherNode } from './ResearcherNode';
 import { ToolCallNode } from './ToolCallNode';
+import { BasicOutputNode } from './BasicOutputNode';
 
-export function createNodeFactory(type: BaseNode.NodeType, toolCallName?: string): BaseNode {
-    switch (type) {
+export interface ICreateNodeFactoryParams {
+    type: BaseNode.NodeType;
+    toolCallName?: string;
+    subType?: string;
+}
+
+export function createNodeFactory(params: ICreateNodeFactoryParams): BaseNode {
+    switch (params.type) {
         case 'ClarifyWithUser':
             return ClarifyWithUserNode.createNew();
         case 'BriefGeneration':
@@ -20,8 +27,14 @@ export function createNodeFactory(type: BaseNode.NodeType, toolCallName?: string
         case 'Researcher':
             return ResearcherNode.createNew();
         case 'ToolCall':
-            return ToolCallNode.createNew(toolCallName);
+            return ToolCallNode.createNew(params.toolCallName);
+        case 'BasicOutput': {
+            if (!params.subType) {
+                throw new Error('subType is required for BasicOutput node');
+            }
+            return BasicOutputNode.createNew(params.subType);
+        }
         default:
-            throw new Error(`Unknown node type: ${type}`);
+            throw new Error(`Unknown node type: ${params.type}`);
     }
 }

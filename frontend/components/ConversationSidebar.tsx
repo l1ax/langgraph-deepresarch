@@ -111,7 +111,7 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
     <>
       <div 
         className={cn(
-          "w-[260px] h-full bg-sidebar/50 backdrop-blur-xl flex flex-col transition-all duration-300 ease-in-out border-r border-sidebar-border z-20 absolute md:static md:translate-x-0",
+          "w-[260px] h-full glass-panel flex flex-col transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] border-r-0 z-20 absolute md:static md:translate-x-0 rounded-r-2xl my-2 ml-2 h-[calc(100vh-16px)]",
           !store.isSidebarOpen && "-translate-x-full w-0 opacity-0 md:w-0 md:opacity-0 md:translate-x-0 overflow-hidden"
         )}
       >
@@ -120,17 +120,19 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
            <div className="flex items-center gap-2">
              <Button
                onClick={() => store.createNewConversation()}
-               className="flex-1 h-10 rounded-full bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent/80 hover:shadow-sm justify-start px-4 gap-3 text-sm font-medium transition-all"
+               className="flex-1 h-11 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary shadow-none justify-start px-4 gap-3 text-sm font-semibold transition-all group border border-primary/20"
                variant="ghost"
              >
-               <Plus className="h-5 w-5 text-sidebar-foreground/70" />
-               <span>新对话</span>
+               <div className="bg-primary/10 p-1.5 rounded-lg group-hover:bg-primary/20 transition-colors">
+                 <Plus className="h-4 w-4" />
+               </div>
+               <span>New Chat</span>
              </Button>
              <Button
                variant="ghost" 
                size="icon" 
                onClick={() => store.toggleSidebar()}
-               className="h-10 w-10 rounded-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/80"
+               className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
              >
                <PanelLeftClose className="h-5 w-5" />
              </Button>
@@ -138,17 +140,17 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
         </div>
 
         {/* Conversation List */}
-        <ScrollArea className="flex-1 px-3">
+        <ScrollArea className="flex-1">
           <div className="space-y-6 pb-4">
              {Object.entries(getGroupedConversations()).map(([group, items]) => {
                 if (items.length === 0) return null;
                 
                 return (
-                   <div key={group} className="space-y-2 w-[240px]">
-                      <h3 className="text-xs font-semibold text-sidebar-foreground/40 px-3 uppercase tracking-wider">
+                   <div key={group} className="space-y-2 w-full">
+                      <h3 className="text-[10px] font-bold text-muted-foreground/50 px-3 uppercase tracking-widest">
                         {groupHeaderMap[group] || group}
                       </h3>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                          {items.map((conv) => {
                            const isSelected = store.currentConversation?.threadId === conv.threadId;
                            return (
@@ -156,23 +158,23 @@ export const ConversationSidebar = observer(({ store }: ConversationSidebarProps
                              key={conv.threadId}
                              onClick={() => flowResult(store.switchToConversation(conv))}
                              className={cn(
-                               "group flex items-center gap-3.5 px-3 py-2.5 mx-2 rounded-lg cursor-pointer transition-all duration-200 relative",
+                               "max-w-[240px] group flex items-center gap-3 px-3 py-2.5 mx-0 rounded-xl cursor-pointer transition-all duration-200 relative min-w-0 pr-8",
                                isSelected
-                                 ? "bg-[#0842a0] text-white shadow-md font-medium"
-                                 : "text-sidebar-foreground/90 font-medium hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                                 ? "bg-white/50 dark:bg-white/10 text-primary shadow-sm border border-primary/10 ring-1 ring-primary/20"
+                                 : "text-muted-foreground hover:bg-white/30 dark:hover:bg-white/5 hover:text-foreground"
                              )}
                            >
                               <MessageSquare className={cn(
                                 "h-4 w-4 shrink-0 transition-colors",
-                                isSelected ? "text-white" : "text-sidebar-foreground/80 group-hover:text-sidebar-foreground"
+                                isSelected ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground/80"
                               )} />
-                              <span className="truncate text-sm flex-1 pr-6">
+                              <span className="truncate text-sm flex-1 min-w-0">
                                 {conv.title || "新对话"}
                               </span>
                               
                               {/* Delete Action - Visible on Hover */}
                               <button
-                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded-md"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-destructive/10 hover:text-destructive rounded-md bg-white/50 backdrop-blur-sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setThreadToDelete(conv.threadId);

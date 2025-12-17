@@ -56,12 +56,12 @@ const ConversationSkeleton = () => (
 /** 用户消息元素渲染组件 */
 const UserElementRenderer = observer<{ element: Conversation.UserElement }>(({ element }) => (
   <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-end pl-0 md:pl-12 group">
-    <div className="relative rounded-2xl px-5 py-3.5 text-sm leading-relaxed max-w-full overflow-hidden bg-muted/50 text-foreground rounded-tr-sm">
+    <div className="relative rounded-2xl rounded-tr-sm px-6 py-4 text-sm leading-relaxed max-w-full overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 text-foreground shadow-sm border border-primary/10">
       <div className="whitespace-pre-wrap break-words">{element.content}</div>
     </div>
-    <Avatar className="h-8 w-8 shrink-0 mt-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+    <Avatar className="h-9 w-9 shrink-0 mt-1 shadow-sm ring-2 ring-white dark:ring-zinc-800">
       {userStore.currentUser?.avatarUrl && <AvatarImage src={userStore.currentUser.avatarUrl} />}
-      <AvatarFallback className="bg-muted text-muted-foreground">
+      <AvatarFallback className="bg-primary/10 text-primary">
         <User className="h-4 w-4" />
       </AvatarFallback>
     </Avatar>
@@ -73,9 +73,9 @@ const AssistantElementRenderer = observer<{ element: Conversation.AssistantEleme
   const { executionResponse } = element;
   return (
     <div className="flex w-full gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 justify-start pr-0 md:pr-12">
-      <Avatar className="h-8 w-8 shrink-0 mt-1 gradient-border p-[1px] bg-transparent">
-         <div className="h-full w-full rounded-full bg-background flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary" />
+      <Avatar className="h-9 w-9 shrink-0 mt-1 p-[1px] bg-gradient-to-br from-blue-400 to-purple-500 shadow-[0_0_15px_rgba(66,133,244,0.4)]">
+         <div className="h-full w-full rounded-full bg-background flex items-center justify-center relative z-10">
+            <Sparkles className="h-5 w-5 text-transparent bg-clip-text bg-gradient-to-tr from-blue-500 to-purple-500 fill-current" />
          </div>
       </Avatar>
       <div className="flex-1 space-y-3 min-w-0">
@@ -103,42 +103,57 @@ const LoadingIndicator = observer(() => (
 const LandingEvent = observer<{ store: DeepResearchPageStore; onSuggestion: (p: string) => void }>(({ store, onSuggestion }) => {
   const isAuthenticated = userStore.isAuthenticated;
 
-  // New Gradient Hello
-  const helloGradient = "bg-gradient-to-r from-[#4285F4] via-[#9B72CB] to-[#D96570] text-transparent bg-clip-text";
-
   return (
-     <div className="flex h-full w-full flex-col items-center justify-center px-4 -mt-20">
-         <div className="w-full max-w-3xl space-y-12 text-center">
-            <div className="space-y-4">
-              <h1 className={cn("text-5xl md:text-6xl font-medium tracking-tight px-4 pb-2", helloGradient)}>
-                你好, {isAuthenticated ? (userStore.currentUser?.name?.split(' ')[0] || '的朋友') : '访客'}
+     <div className="flex h-full w-full flex-col items-center justify-center px-4 relative">
+         {/* Background Decor */}
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/20 blur-[120px] rounded-full opacity-30 pointer-events-none" />
+
+         <div className="w-full max-w-4xl space-y-16 text-center relative z-10">
+            <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700 ease-out">
+              <h1 className="text-6xl md:text-7xl font-semibold tracking-tighter px-4 pb-2">
+                <span className="text-gradient-gemini">
+                  Hello, {isAuthenticated ? (userStore.currentUser?.name?.split(' ')[0] || 'Friend') : 'Guest'}
+                </span>
               </h1>
-              <h2 className="text-3xl md:text-4xl text-muted-foreground font-light px-4">
-                今天想研究点什么？
+              <h2 className="text-2xl md:text-3xl text-muted-foreground font-light px-4 tracking-tight">
+                What would you like to research today?
               </h2>
             </div>
             
             {!isAuthenticated ? (
-               <div className="max-w-sm mx-auto p-6 rounded-2xl bg-card border border-border/50 shadow-xl">
-                 <LoginForm store={store} />
+               <div className="max-w-sm mx-auto p-1 glass-panel rounded-3xl">
+                 <div className="bg-white/50 dark:bg-black/50 p-6 rounded-[20px]">
+                   <LoginForm store={store} />
+                 </div>
                </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full px-4">
                  {[
-                    { text: '对比特斯拉与比亚迪的供应链差异', icon: '🏭' },
-                    { text: '分析英伟达最新财报亮点与风险', icon: '📈' },
-                    { text: '具身智能 (Embodied AI) 商业化现状', icon: '🤖' },
-                    { text: '2030年量子计算的发展预测', icon: '⚛️' }
-                 ].map((item) => (
+                    { text: '对比特斯拉与比亚迪的供应链差异', icon: '🏭', color: 'bg-blue-500/10 text-blue-600' },
+                    { text: '分析英伟达最新财报亮点与风险', icon: '📈', color: 'bg-green-500/10 text-green-600' },
+                    { text: '具身智能 (Embodied AI) 商业化现状', icon: '🤖', color: 'bg-purple-500/10 text-purple-600' },
+                    { text: '2030年量子计算的发展预测', icon: '⚛️', color: 'bg-indigo-500/10 text-indigo-600' }
+                 ].map((item, i) => (
                     <button
                       key={item.text}
                       onClick={() => onSuggestion(item.text)}
-                      className="group flex flex-col items-start p-6 h-32 rounded-2xl bg-white hover:bg-[#eaeaea]/60 transition-all border border-transparent hover:border-border/50 text-left cursor-pointer"
+                      className={cn(
+                        "glass-card group flex items-start gap-4 p-6 h-36 rounded-2xl text-left cursor-pointer hover:-translate-y-1 transition-all duration-300",
+                        "animate-in fade-in zoom-in duration-500 fill-mode-both"
+                      )}
+                      style={{ animationDelay: `${i * 100}ms` }}
                     >
-                       <span className="text-2xl mb-auto">{item.icon}</span>
-                       <span className="text-sm font-medium text-foreground/80 group-hover:text-foreground">
-                         {item.text}
-                       </span>
+                       <div className={cn("p-3 rounded-xl shrink-0 transition-colors", item.color)}>
+                         <span className="text-2xl">{item.icon}</span>
+                       </div>
+                       <div className="flex flex-col h-full py-1">
+                          <span className="text-lg font-medium text-foreground/90 group-hover:text-primary transition-colors line-clamp-2">
+                             {item.text}
+                          </span>
+                          <span className="mt-auto text-xs text-muted-foreground font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-10px] group-hover:translate-x-0 duration-300">
+                             Start Research <Sparkles className="h-3 w-3" />
+                          </span>
+                       </div>
                     </button>
                  ))}
               </div>

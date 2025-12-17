@@ -56,107 +56,102 @@
   --radius: 0.75rem;
 /* --- Refined Palette: "Techno-Organic" / Clean Slate --- */
 
-  /* Main Background: Slightly cooler, cleaner than generic gray */
+  /* Main Background: Clean, premium slate */
   --background: #F8FAFC;
-  --foreground: #1E293B;
-    /* Slate-800 - softer than pure black */
+  --foreground: #0F172A;
+    /* Darker, sharper text */
 
   --card: #FFFFFF;
   --card-foreground: #334155;
-    /* Slate-700 */
 
   --popover: #FFFFFF;
   --popover-foreground: #334155;
 
-  /* Primary: A more vibrant, tech-forward blue */
-    --primary: #3B82F6;
-    /* Blue-500 */
+  /* Primary: Google Blue - Vibrant but accessible */
+    --primary: #1A73E8;
   --primary-foreground: #FFFFFF;
 
   --secondary: #F1F5F9;
-    /* Slate-100 */
-    --secondary-foreground: #475569;
+  --secondary-foreground: #475569;
 
   --muted: #F8FAFC;
-    --muted-foreground: #64748B;
-    /* Slate-500 */
+  --muted-foreground: #64748B;
 
   --accent: #F1F5F9;
-    --accent-foreground: #1E293B;
+  --accent-foreground: #1E293B;
 
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
 
   --border: #E2E8F0;
-    /* Slate-200 */
   --input: #F1F5F9;
-  --ring: #3B82F6;
+  --ring: #1A73E8;
 
-  /* Sidebar */
-    --sidebar: #EEF2F6;
-    /* Very subtle cool gray */
+  /* Sidebar: Glass-ready transparent base */
+    --sidebar: rgba(248, 250, 252, 0.8);
   --sidebar-foreground: #475569;
-  --sidebar-primary: #3B82F6;
+  --sidebar-primary: #1A73E8;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #E2E8F0;
+  --sidebar-accent: rgba(226, 232, 240, 0.6);
   --sidebar-accent-foreground: #1E293B;
-  --sidebar-border: #E2E8F0;
-  --sidebar-ring: #3B82F6;
+  --sidebar-border: rgba(226, 232, 240, 0.5);
+    --sidebar-ring: #1A73E8;
 
-  /* Shadows */
-    --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.05);
-    --shadow-glass-hover: 0 10px 40px rgba(0, 0, 0, 0.08);
-    --shadow-glow-blue: 0 0 20px -5px rgba(59, 130, 246, 0.5);
+  /* Enhanced Shadows & Glows */
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --shadow-glass-hover: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --shadow-glow-blue: 0 0 20px rgba(26, 115, 232, 0.4);
+    --shadow-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-elevation-2: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
   
     /* Prompter */
-  --prompter-bg: #FFFFFF;
+  --prompter-bg: rgba(255, 255, 255, 0.9);
   --prompter-border: #E2E8F0;
 }
 
 /* Dark Mode Overrides - Deep Space Feel */
 .dark {
-  --background: #0B0C0E;
-    /* Almost black, hint of slate */
+  --background: #0F172A;
+    /* Deep slate blue, not pitch black */
     --foreground: #E2E8F0;
   
-    --card: #15171A;
+  --card: #1E293B;
     --card-foreground: #E2E8F0;
   
-  --popover: #15171A;
+  --popover: #1E293B;
     --popover-foreground: #E2E8F0;
   
-  --primary: #60A5FA;
-    /* Blue-400 */
+  --primary: #8AB4F8;
+    /* Google Dark Mode Blue */
     --primary-foreground: #0F172A;
   
   --secondary: #1E293B;
-    --secondary-foreground: #E2E8F0;
+  --secondary-foreground: #E2E8F0;
   
   --muted: #1E293B;
-    --muted-foreground: #94A3B8;
+  --muted-foreground: #94A3B8;
   
   --accent: #1E293B;
-    --accent-foreground: #F8FAFC;
+  --accent-foreground: #F8FAFC;
   
-  --border: #2D3748;
+  --border: #334155;
     --input: #1E293B;
-    --ring: #60A5FA;
+  --ring: #8AB4F8;
   
-  --sidebar: #050506;
-    /* Darker than bg */
+  --sidebar: rgba(15, 23, 42, 0.8);
     --sidebar-foreground: #CBD5E1;
-    --sidebar-primary: #60A5FA;
+  --sidebar-primary: #8AB4F8;
     --sidebar-primary-foreground: #0F172A;
-    --sidebar-accent: #1E293B;
+  --sidebar-accent: rgba(30, 41, 59, 0.6);
     --sidebar-accent-foreground: #F8FAFC;
-    --sidebar-border: #1E293B;
-    --sidebar-ring: #60A5FA;
+  --sidebar-border: rgba(51, 65, 85, 0.5);
+    --sidebar-ring: #8AB4F8;
   
-  --prompter-bg: #15171A;
-    --prompter-border: #2D3748;
-  --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.3);
-    --shadow-glass-hover: 0 10px 40px rgba(0, 0, 0, 0.5);
-    --shadow-glow-blue: 0 0 25px -5px rgba(96, 165, 250, 0.4);
+    --prompter-bg: rgba(30, 41, 59, 0.9);
+      --prompter-border: #334155;
+      --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --shadow-glass-hover: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      --shadow-glow-blue: 0 0 25px rgba(138, 180, 248, 0.3);
 }
 
 @layer base {
@@ -164,13 +159,22 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased tracking-tight;
+    }
+    
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      @apply tracking-tight font-medium;
   }
 }
 
 /* Utility for text gradients often used in Gemini */
 .text-gradient-gemini {
-  background: linear-gradient(74deg, #4285F4 0%, #9B72CB 9%, #D96570 14%, #D96570 79%, #9B72CB 86%, #4285F4 100%);
+  background: linear-gradient(74deg, #1A73E8 0%, #9B72CB 9%, #D96570 14%, #D96570 79%, #9B72CB 86%, #1A73E8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -179,9 +183,12 @@
 
 /* Custom Glass Utilities */
 .glass-panel {
-  @apply bg-white/70 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[var(--shadow-glass)];
+  @apply bg-sidebar backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[var(--shadow-glass)];
 }
 
 .glass-card {
   @apply bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border border-white/40 dark:border-white/5 shadow-sm hover:shadow-[var(--shadow-glass-hover)] transition-all duration-300;
+}
+.glow-effect {
+  @apply shadow-[var(--shadow-glow-blue)] border-primary/50;
 }

@@ -2,6 +2,16 @@ import { observable, action, computed, makeObservable, runInAction, flow } from 
 import mitt from 'mitt';
 import { authService, type AuthUser } from '@/services/auth';
 
+const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
+// 开发模式虚拟用户
+const DEV_USER: AuthUser = {
+  id: 'dev-user-001',
+  email: 'dev@localhost',
+  name: 'Dev User',
+  avatarUrl: null,
+};
+
 /** UserStore 事件类型 */
 type UserEvents = {
   userChange: AuthUser | null;
@@ -80,6 +90,14 @@ export class UserStore {
   @flow.bound
   * initialize(): Generator<Promise<any>, void, any> {
     if (this.authUnsubscribe) {
+      return;
+    }
+
+    // 开发模式：直接设置虚拟用户，跳过 Supabase 认证
+    if (isDevMode) {
+      this.currentUser = DEV_USER;
+      this.emitUserChange(DEV_USER);
+      this.isAuthLoading = false;
       return;
     }
 

@@ -9,6 +9,8 @@ import { userStore } from './User';
 const LANGGRAPH_API_URL =
   process.env.NEXT_PUBLIC_LANGGRAPH_API_URL || 'http://localhost:2024';
 
+const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
 /**
  * DeepResearchPageStore
  * 页面级 Store，管理 client 和 conversations
@@ -56,9 +58,10 @@ export class DeepResearchPageStore {
     userStore.events.on('userChange', this.onUserChange);
   }
 
-  /** 加载用户的会话列表 */
   @flow.bound
   *loadUserConversations(): Generator<Promise<any>, void, any> {
+    // 开发模式：跳过会话列表加载（临时对话，无需持久化）
+    if (isDevMode) return;
     if (!userStore.currentUser) return;
 
     try {
@@ -312,8 +315,8 @@ export class DeepResearchPageStore {
   * handleSubmit() {
     if (!this.inputValue.trim()) return;
 
-    // 检查是否已登录
-    if (!userStore.currentUser) {
+    // 检查是否已登录（开发模式跳过）
+    if (!isDevMode && !userStore.currentUser) {
       throw new Error('请先登录后再发送消息');
     }
 
@@ -352,10 +355,10 @@ export class DeepResearchPageStore {
     return this.currentConversation?.executor.isExecuting ?? false;
   }
 
-  /** 是否可以提交（非加载中且输入不为空且已登录） */
+  /** 是否可以提交（非加载中且输入不为空且已登录或开发模式） */
   @computed
   get canSubmit(): boolean {
-    return !this.isLoading && !!this.inputValue.trim() && !!userStore.currentUser;
+    return !this.isLoading && !!this.inputValue.trim() && (isDevMode || !!userStore.currentUser);
   }
 
   /** 获取当前会话的所有元素（用于 UI 渲染） */

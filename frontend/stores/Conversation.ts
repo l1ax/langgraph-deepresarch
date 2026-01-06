@@ -11,6 +11,8 @@ import data from './data.json';
 const LANGGRAPH_API_URL =
   process.env.NEXT_PUBLIC_LANGGRAPH_API_URL || 'http://localhost:2024';
 
+const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
 /**
  * Conversation 类
  * 以 threadId 为唯一标识，管理一次对话中的所有 elements
@@ -18,6 +20,16 @@ const LANGGRAPH_API_URL =
  */
 export class Conversation {
   static async createNew(title: string): Promise<Conversation> {
+    // 开发模式：直连后端，使用 LangGraph SDK 创建 thread
+    if (isDevMode) {
+      const client = new Client({ apiUrl: LANGGRAPH_API_URL });
+      const thread = await client.threads.create({
+        metadata: { title: title }
+      });
+      return new Conversation(thread.thread_id, title);
+    }
+
+    // 生产模式：通过 Proxy 创建 thread
     if (!userStore.currentUser) {
       throw new Error('User not logged in');
     }

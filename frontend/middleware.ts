@@ -1,7 +1,13 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
+const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
 export async function middleware(request: NextRequest) {
+  // 开发模式：跳过认证检查
+  if (isDevMode) {
+    return NextResponse.next({ request });
+  }
   return await updateSession(request);
 }
 
